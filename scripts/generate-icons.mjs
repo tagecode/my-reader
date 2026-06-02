@@ -1,6 +1,6 @@
 /**
- * 从 build/icon-source.png（完整品牌图：squircle 图标 + 下方文案）生成各平台图标。
- * 自动检测图标区域：去掉顶部留白，在图标与文字之间的白缝处裁切。
+ * 从 build/icon-source.png（透明底品牌图：squircle 图标 + 下方文案）生成各平台图标。
+ * 自动裁剪 squircle 区域，去掉下方「摸鱼阅读器 / My Reader」文案。
  */
 import { execSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -25,40 +25,121 @@ const LINUX_ICONS = path.join(BUILD, 'icons')
 const LINUX_SIZES = [16, 32, 48, 64, 128, 256, 512]
 const FAVICON_SIZES = [16, 32, 180, 192, 512]
 const ICO_SIZES = [16, 24, 32, 48, 64, 128, 256]
+const MASTER_SIZE = 1024
 
-/** 行内白色像素占比超过此值视为「空白行」 */
-const WHITE_ROW_RATIO = 0.92
-/** 图标与文字之间白缝的最小高度（像素） */
-const MIN_GAP_HEIGHT = 8
-/** 文案起始行检测：中心区域深色笔画占比阈值 */
-const TEXT_ROW_RATIO = 0.035
-/** 裁切时在检测到文字之前额外上移的像素 */
-const TEXT_BOTTOM_MARGIN = 20
+/** 文案区起始判定：行内图标像素占比阈值 */
+const TEXT_ROW_RATIO = 0.35
+/** 文案行内插画（白/红）占比上限，用于与 squircle 底边区分 */
+const TEXT_ILLUSTRATION_MAX = 0.03
+/** squircle 行判定阈值 */
+const SQUIRCLE_ROW_RATIO = 0.06
+/** 插画行判定阈值（白色波浪、红色书签等） */
+const ILLUSTRATION_ROW_RATIO = 0.015
+/** 正方形裁切留白（相对 squircle 边长） */
+const CROP_PADDING_X_RATIO = 0.04
+const CROP_PADDING_TOP_RATIO = 0.04
+const CROP_PADDING_BOTTOM_RATIO = 0.05
 
-function isWhite(r, g, b) {
-  return r > 245 && g > 245 && b > 245
+/** 透明或浅灰底 */
+function isBackground(r, g, b, a) {
+  if (a < 16) return true
+  return r > 228 && g > 228 && b > 228 && Math.abs(r - g) < 12 && Math.abs(g - b) < 12
 }
 
-/** squircle 棕色底 */
+/** 深灰 squircle 底色 */
 function isSquircleBg(r, g, b) {
   return (
-    r >= 120 &&
-    r <= 200 &&
-    g >= 100 &&
-    g <= 170 &&
-    b >= 90 &&
-    b <= 150 &&
-    Math.abs(r - g) < 40
+    r >= 45 &&
+    r <= 95 &&
+    g >= 45 &&
+    g <= 95 &&
+    b >= 45 &&
+    b <= 95 &&
+    Math.abs(r - g) < 15 &&
+    Math.abs(g - b) < 15
   )
 }
 
-/** 下方「摸鱼阅读器」等深色字 */
-function isDarkText(r, g, b) {
-  return r < 95 && g < 80 && b < 70
+/** 图标内白色插画或红色点缀 */
+function isIllustration(r, g, b) {
+  if (r > 248 && g > 248 && b > 248) return true
+  return r > 160 && g < 130 && b < 130
+}
+
+function rowBgRatio(data, w, y, x0, x1) {
+  let bg = 0
+  let n = 0
+  for (let x = x0; x <= x1; x += 2) {
+    const i = (y * w + x) * 4
+    n++
+    if (isBackground(data[i], data[i + 1], data[i + 2], data[i + 3])) bg++
+  }
+  return bg / n
+}
+
+function rowSquircleRatio(data, w, y, x0, x1) {
+  let sq = 0
+  let n = 0
+  for (let x = x0; x <= x1; x += 2) {
+    const i = (y * w + x) * 4
+    n++
+    if (isSquircleBg(data[i], data[i + 1], data[i + 2])) sq++
+  }
+  return sq / n
+}
+
+function rowIllustrationRatio(data, w, y, x0, x1) {
+  let ill = 0
+  let n = 0
+  for (let x = x0; x <= x1; x += 2) {
+    const i = (y * w + x) * 4
+    n++
+    if (isIllustration(data[i], data[i + 1], data[i + 2])) ill++
+  }
+  return ill / n
+}
+
+function isTextRow(data, w, y, x0, x1, contentTop, contentBottom) {
+  if (y < contentTop + (contentBottom - contentTop) * 0.62) return false
+  const icon = rowIconRatio(data, w, y, x0, x1)
+  const ill = rowIllustrationRatio(data, w, y, x0, x1)
+  return icon >= TEXT_ROW_RATIO && ill <= TEXT_ILLUSTRATION_MAX
+}
+
+function rowIconRatio(data, w, y, x0, x1) {
+  let icon = 0
+  let n = 0
+  for (let x = x0; x <= x1; x += 2) {
+    const i = (y * w + x) * 4
+    n++
+    const r = data[i]
+    const g = data[i + 1]
+    const b = data[i + 2]
+    const a = data[i + 3]
+    if (isBackground(r, g, b, a)) continue
+    if (isSquircleBg(r, g, b) || isIllustration(r, g, b)) icon++
+  }
+  return icon / n
+}
+
+function rowHasIconContent(data, w, y, x0, x1) {
+  let sq = 0
+  let ill = 0
+  let n = 0
+  for (let x = x0; x <= x1; x += 2) {
+    const i = (y * w + x) * 4
+    n++
+    const r = data[i]
+    const g = data[i + 1]
+    const b = data[i + 2]
+    if (isSquircleBg(r, g, b)) sq++
+    if (isIllustration(r, g, b)) ill++
+  }
+  return sq / n >= SQUIRCLE_ROW_RATIO || ill / n >= ILLUSTRATION_ROW_RATIO
 }
 
 /**
- * 分析源图，返回 squircle 图标的正方形裁剪框（不含下方文字与顶部留白）。
+ * 分析源图，返回 squircle 图标的正方形裁剪框（不含下方文字）。
  */
 async function detectIconBounds(sourcePath) {
   const { data, info } = await sharp(sourcePath)
@@ -68,102 +149,112 @@ async function detectIconBounds(sourcePath) {
 
   const w = info.width
   const h = info.height
+  const bandX0 = Math.floor(w * 0.12)
+  const bandX1 = Math.floor(w * 0.88)
 
-  let minX = w
-  let minY = h
-  let maxX = 0
-  let maxY = 0
-
+  let contentTop = 0
+  let contentBottom = h - 1
   for (let y = 0; y < h; y++) {
+    if (rowBgRatio(data, w, y, bandX0, bandX1) < 0.95) {
+      contentTop = y
+      break
+    }
+  }
+  for (let y = h - 1; y >= 0; y--) {
+    if (rowBgRatio(data, w, y, bandX0, bandX1) < 0.95) {
+      contentBottom = y
+      break
+    }
+  }
+
+  // 先在 squircle 主体区域估算水平范围
+  let iconMinX = w
+  let iconMaxX = 0
+  const squircleScanLimit = contentTop + Math.floor((contentBottom - contentTop) * 0.62)
+  for (let y = contentTop; y <= squircleScanLimit; y++) {
+    if (rowSquircleRatio(data, w, y, bandX0, bandX1) < 0.15) continue
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4
-      if (!isWhite(data[i], data[i + 1], data[i + 2])) {
-        minX = Math.min(minX, x)
-        maxX = Math.max(maxX, x)
-        minY = Math.min(minY, y)
-        maxY = Math.max(maxY, y)
+      if (isSquircleBg(data[i], data[i + 1], data[i + 2])) {
+        iconMinX = Math.min(iconMinX, x)
+        iconMaxX = Math.max(iconMaxX, x)
       }
     }
   }
 
-  const rowWhiteRatio = (y) => {
-    let white = 0
-    let n = 0
-    for (let x = minX; x <= maxX; x += 2) {
-      const i = (y * w + x) * 4
-      n++
-      if (isWhite(data[i], data[i + 1], data[i + 2])) white++
-    }
-    return white / n
-  }
-
-  const gapClusters = []
-  let gapStart = -1
-  for (let y = minY; y <= maxY; y++) {
-    const isGapRow = rowWhiteRatio(y) >= WHITE_ROW_RATIO
-    if (isGapRow && gapStart < 0) gapStart = y
-    if (!isGapRow && gapStart >= 0) {
-      gapClusters.push({ y0: gapStart, y1: y - 1, height: y - gapStart })
-      gapStart = -1
+  if (iconMinX >= iconMaxX) {
+    for (let y = contentTop; y <= contentBottom; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4
+        if (isSquircleBg(data[i], data[i + 1], data[i + 2])) {
+          iconMinX = Math.min(iconMinX, x)
+          iconMaxX = Math.max(iconMaxX, x)
+        }
+      }
     }
   }
-  if (gapStart >= 0) {
-    gapClusters.push({ y0: gapStart, y1: maxY, height: maxY - gapStart + 1 })
-  }
 
-  const iconTop = minY
-  // 文案只在画面下缘，避免把书页/阴影当成文字
-  const searchTextFrom = minY + Math.floor((maxY - minY) * 0.78)
-
-  let textStartRow = maxY + 1
-  for (let y = searchTextFrom; y <= maxY; y++) {
-    let text = 0
-    let n = 0
-    for (let x = Math.floor(w * 0.22); x <= Math.floor(w * 0.78); x += 2) {
-      const i = (y * w + x) * 4
-      n++
-      if (isDarkText(data[i], data[i + 1], data[i + 2])) text++
-    }
-    if (text / n >= TEXT_ROW_RATIO) {
+  const textSearchFrom = contentTop + Math.floor((contentBottom - contentTop) * 0.55)
+  let textStartRow = h
+  for (let y = textSearchFrom; y <= contentBottom; y++) {
+    if (isTextRow(data, w, y, iconMinX, iconMaxX, contentTop, contentBottom)) {
       textStartRow = y
       break
     }
   }
 
-  let squircleBottom = iconTop
-  for (let y = iconTop; y <= maxY; y++) {
-    let edgeBg = 0
-    for (const x of [
-      minX + 8,
-      minX + Math.floor((maxX - minX) * 0.08),
-      maxX - Math.floor((maxX - minX) * 0.08),
-      maxX - 8,
-    ]) {
-      const i = (y * w + x) * 4
-      if (isSquircleBg(data[i], data[i + 1], data[i + 2])) edgeBg++
-    }
-    if (edgeBg >= 2) squircleBottom = y
+  let iconTop = h
+  let iconBottom = contentTop
+  const iconScanLimit = textStartRow < h ? textStartRow - 1 : contentBottom
+  for (let y = contentTop; y <= iconScanLimit; y++) {
+    if (!rowHasIconContent(data, w, y, iconMinX, iconMaxX)) continue
+    iconTop = Math.min(iconTop, y)
+    iconBottom = Math.max(iconBottom, y)
   }
 
-  const lowerBandStart = minY + (maxY - minY) * 0.72
-  const separatorGaps = gapClusters
-    .filter((g) => g.height >= MIN_GAP_HEIGHT && g.y0 >= lowerBandStart)
-    .sort((a, b) => a.y0 - b.y0)
+  if (iconTop >= h) {
+    iconTop = contentTop
+    iconBottom = contentBottom
+  }
 
-  const candidates = [
-    textStartRow <= maxY ? textStartRow - 1 - TEXT_BOTTOM_MARGIN : maxY,
-    squircleBottom,
-    separatorGaps.length > 0 ? separatorGaps[0].y0 - 1 : maxY,
-  ]
-  const iconBottom = Math.min(...candidates)
+  // squircle 外框（深灰圆角方块），用于计算与边缘的距离
+  let frameTop = h
+  let frameBottom = 0
+  let frameLeft = w
+  let frameRight = 0
+  for (let y = iconTop; y <= iconBottom; y++) {
+    for (let x = iconMinX; x <= iconMaxX; x++) {
+      const i = (y * w + x) * 4
+      if (!isSquircleBg(data[i], data[i + 1], data[i + 2])) continue
+      frameTop = Math.min(frameTop, y)
+      frameBottom = Math.max(frameBottom, y)
+      frameLeft = Math.min(frameLeft, x)
+      frameRight = Math.max(frameRight, x)
+    }
+  }
 
-  const iconHeight = iconBottom - iconTop + 1
-  const contentWidth = maxX - minX + 1
-  const side = Math.min(iconHeight, contentWidth)
+  if (frameTop >= h) {
+    frameTop = iconTop
+    frameBottom = iconBottom
+    frameLeft = iconMinX
+    frameRight = iconMaxX
+  }
 
-  const centerX = Math.floor((minX + maxX) / 2)
+  const frameWidth = frameRight - frameLeft + 1
+  const frameHeight = frameBottom - frameTop + 1
+  const frameBase = Math.max(frameWidth, frameHeight)
+  const padX = Math.round(frameBase * CROP_PADDING_X_RATIO)
+  const padTop = Math.round(frameBase * CROP_PADDING_TOP_RATIO)
+  const padBottom = Math.round(frameBase * CROP_PADDING_BOTTOM_RATIO)
+  const side = Math.min(
+    w,
+    h,
+    Math.max(frameWidth + padX * 2, frameHeight + padTop + padBottom),
+  )
+
+  const centerX = Math.floor((frameLeft + frameRight) / 2)
   const left = Math.max(0, Math.min(centerX - Math.floor(side / 2), w - side))
-  const top = iconTop
+  const top = Math.max(0, Math.min(frameTop - padTop, h - side))
 
   return {
     left,
@@ -171,12 +262,23 @@ async function detectIconBounds(sourcePath) {
     width: side,
     height: side,
     debug: {
-      trim: { minX, minY, maxX, maxY },
+      contentTop,
+      contentBottom,
+      iconTop,
       iconBottom,
-      textStartRow: textStartRow <= maxY ? textStartRow : null,
-      squircleBottom,
-      separatorGap: separatorGaps[0] ?? null,
+      frameTop,
+      frameBottom,
+      frameLeft,
+      frameRight,
+      iconMinX,
+      iconMaxX,
+      textStartRow: textStartRow < h ? textStartRow : null,
       side,
+      padTop,
+      padBottom,
+      padX,
+      marginTop: frameTop - top,
+      marginBottom: top + side - 1 - frameBottom,
     },
   }
 }
@@ -198,15 +300,13 @@ async function extractAppIcon() {
   console.log(
     `裁剪区域: left=${bounds.left} top=${bounds.top} ${bounds.width}×${bounds.height}`,
   )
+  console.log(`图标范围: top=${bounds.debug.iconTop} bottom=${bounds.debug.iconBottom}`)
   if (bounds.debug.textStartRow != null) {
     console.log(`检测到文案起始行: y=${bounds.debug.textStartRow}`)
   }
-  console.log(`squircle 底边: y=${bounds.debug.squircleBottom}`)
-  if (bounds.debug.separatorGap) {
-    console.log(
-      `图标/文字分界白缝: y=${bounds.debug.separatorGap.y0}–${bounds.debug.separatorGap.y1}`,
-    )
-  }
+  console.log(
+    `边距: 上 ${bounds.debug.marginTop}px / 下 ${bounds.debug.marginBottom}px（目标留白 top=${bounds.debug.padTop} bottom=${bounds.debug.padBottom}）`,
+  )
 
   return sharp(SOURCE)
     .extract({
@@ -215,7 +315,8 @@ async function extractAppIcon() {
       width: bounds.width,
       height: bounds.height,
     })
-    .resize(1024, 1024, { fit: 'fill' })
+    .resize(MASTER_SIZE, MASTER_SIZE, { fit: 'fill' })
+    .ensureAlpha()
     .png()
     .toBuffer()
 }

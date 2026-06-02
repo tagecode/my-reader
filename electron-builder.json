@@ -9,6 +9,10 @@
   },
   "files": ["dist/**/*", "dist-electron/**/*"],
   "icon": "build/icon.png",
+  "electronDist": "node_modules/electron/dist",
+  "electronDownload": {
+    "mirror": "https://npmmirror.com/mirrors/electron/"
+  },
   "npmRebuild": true,
   "asar": true,
   "asarUnpack": ["**/node_modules/better-sqlite3/**"],
