@@ -1,0 +1,183 @@
+import { useCallback, useEffect, useState } from 'react'
+import { EpubReader } from '@/components/reader/EpubReader'
+import { PdfReader } from '@/components/reader/PdfReader'
+import { ReaderSettingsPanel } from '@/components/reader/ReaderSettingsPanel'
+import { ReaderToolbar } from '@/components/reader/ReaderToolbar'
+import { TxtReader } from '@/components/reader/TxtReader'
+import { PageError, PageLoading } from '@/components/ui/page-state'
+import { useAppStore } from '@/stores/app-store'
+import type { Book } from '@/types/electron'
+
+type LoadState = 'loading' | 'ready' | 'error'
+
+export function ReaderPage() {
+  const currentBookId = useAppStore((s) => s.currentBookId)
+  const settings = useAppStore((s) => s.settings)
+  const setPage = useAppStore((s) => s.setPage)
+  const setCurrentBookId = useAppStore((s) => s.setCurrentBookId)
+
+  const [book, setBook] = useState<Book | null>(null)
+  const [fileUrl, setFileUrl] = useState<string | null>(null)
+  const [loadState, setLoadState] = useState<LoadState>('loading')
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [progressPercent, setProgressPercent] = useState(0)
+  const [locationLabel, setLocationLabel] = useState('')
+  const [showSettings, setShowSettings] = useState(false)
+  const [fontSize, setFontSize] = useState(18)
+  const [readingWidth, setReadingWidth] = useState(720)
+
+  useEffect(() => {
+    setFontSize(Number(settings.fontSize ?? 18))
+    setReadingWidth(Number(settings.readingWidth ?? 720))
+  }, [settings.fontSize, settings.readingWidth])
+
+  const handleBack = useCallback(() => {
+    setCurrentBookId(null)
+    setPage('library')
+  }, [setCurrentBookId, setPage])
+
+  useEffect(() => {
+    if (!currentBookId || !window.electronAPI) {
+      setLoadState('error')
+      setLoadError('未选择书籍')
+      return
+    }
+
+    let cancelled = false
+    setLoadState('loading')
+    setLoadError(null)
+    setBook(null)
+    setFileUrl(null)
+
+    const load = async () => {
+      try {
+        const data = await window.electronAPI.getBook(currentBookId)
+        const b = data as Book | null
+        if (cancelled) return
+
+        if (!b) {
+          setLoadState('error')
+          setLoadError('书籍不存在，可能已从书库移除')
+          return
+        }
+
+        setBook(b)
+        setProgressPercent(b.progress_percent ?? 0)
+
+        if (b.format === 'epub') {
+          const url = await window.electronAPI.toFileUrl(b.file_path)
+          if (cancelled) return
+          if (!url) {
+            setLoadState('error')
+            setLoadError('无法打开 EPUB 文件，请检查文件是否仍存在')
+            return
+          }
+          setFileUrl(url)
+        }
+
+        setLoadState('ready')
+      } catch (err) {
+        if (cancelled) return
+        setLoadState('error')
+        setLoadError(
+          err instanceof Error ? err.message : '打开书籍失败，请稍后重试',
+        )
+      }
+    }
+
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [currentBookId])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleBack()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [handleBack])
+
+  if (loadState === 'loading') {
+    return <PageLoading message="正在打开书籍…" />
+  }
+
+  if (loadState === 'error' || !book) {
+    return (
+      <PageError
+        title="无法打开书籍"
+        message={loadError ?? '未知错误'}
+        onBack={handleBack}
+      />
+    )
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <ReaderToolbar
+        book={book}
+        subtitle={locationLabel || book.author || undefined}
+        progressPercent={progressPercent}
+        onBack={handleBack}
+        onToggleSettings={() => setShowSettings((v) => !v)}
+        showToc={book.format === 'epub'}
+      />
+      <div className="flex min-h-0 flex-1">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {book.format === 'epub' && fileUrl && (
+            <EpubReader
+              book={book}
+              fileUrl={fileUrl}
+              fontSize={fontSize}
+              readingWidth={readingWidth}
+              onProgress={setProgressPercent}
+              onLocationLabel={setLocationLabel}
+              onOpenError={(msg) => {
+                setLoadState('error')
+                setLoadError(msg)
+              }}
+            />
+          )}
+          {book.format === 'txt' && (
+            <TxtReader
+              book={book}
+              fontSize={fontSize}
+              readingWidth={readingWidth}
+              onProgress={setProgressPercent}
+              onBack={handleBack}
+            />
+          )}
+          {book.format === 'pdf' && (
+            <PdfReader
+              book={book}
+              onProgress={setProgressPercent}
+              onLocationLabel={setLocationLabel}
+              onBack={handleBack}
+            />
+          )}
+        </div>
+        {showSettings && (
+          <ReaderSettingsPanel
+            fontSize={fontSize}
+            readingWidth={readingWidth}
+            onFontSizeChange={(v) => {
+              setFontSize(v)
+              void window.electronAPI?.setSetting('fontSize', String(v))
+            }}
+            onReadingWidthChange={(v) => {
+              setReadingWidth(v)
+              void window.electronAPI?.setSetting('readingWidth', String(v))
+            }}
+          />
+        )}
+      </div>
+      <footer className="h-1 shrink-0 bg-muted">
+        <div
+          className="h-full bg-primary transition-all"
+          style={{ width: `${Math.min(100, progressPercent)}%` }}
+        />
+      </footer>
+    </div>
+  )
+}

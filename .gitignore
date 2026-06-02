@@ -1,0 +1,46 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+public/pdfjs
+dist
+dist-ssr
+dist-electron
+*.local
+
+# electron-builder packaging output
+release/
+
+# CodeGraph local index (MCP)
+.codegraph/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Test / tooling
+coverage/
+*.tsbuildinfo
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Cursor — share team rules, ignore the rest
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**

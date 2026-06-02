@@ -1,0 +1,56 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.myreader.app",
+  "productName": "摸鱼阅读器",
+  "copyright": "Copyright © 2026 My Reader",
+  "directories": {
+    "output": "release",
+    "buildResources": "build"
+  },
+  "files": ["dist/**/*", "dist-electron/**/*"],
+  "icon": "build/icon.png",
+  "npmRebuild": true,
+  "asar": true,
+  "asarUnpack": ["**/node_modules/better-sqlite3/**"],
+  "mac": {
+    "category": "public.app-category.productivity",
+    "icon": "build/icon.icns",
+    "target": ["dmg", "zip"],
+    "extendInfo": {
+      "CFBundleName": "摸鱼阅读器",
+      "CFBundleDisplayName": "摸鱼阅读器"
+    }
+  },
+  "win": {
+    "icon": "build/icon.ico",
+    "target": ["nsis"]
+  },
+  "linux": {
+    "icon": "build/icons",
+    "target": ["AppImage"],
+    "category": "Office;Viewer"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "installerIcon": "build/icon.ico",
+    "uninstallerIcon": "build/icon.ico"
+  },
+  "fileAssociations": [
+    {
+      "ext": "epub",
+      "name": "EPUB Ebook",
+      "role": "Viewer"
+    },
+    {
+      "ext": "txt",
+      "name": "Text Ebook",
+      "role": "Viewer"
+    },
+    {
+      "ext": "pdf",
+      "name": "PDF Document",
+      "role": "Viewer"
+    }
+  ]
+}
