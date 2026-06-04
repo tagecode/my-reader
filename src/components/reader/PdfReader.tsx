@@ -154,6 +154,40 @@ export function PdfReader({
       .filter((n) => n > 0)
   }, [])
 
+  const getCurrentPage = useCallback(() => {
+    const container = containerRef.current
+    if (!container || numPages === 0) return 1
+
+    const maxScroll = container.scrollHeight - container.clientHeight
+    if (maxScroll > 0) {
+      const ratio = container.scrollTop / maxScroll
+      return Math.min(numPages, Math.max(1, Math.round(ratio * numPages) || 1))
+    }
+
+    const pages = getMountedPageNumbers()
+    if (pages.length === 0) return 1
+
+    const containerRect = container.getBoundingClientRect()
+    const centerY = containerRect.top + container.clientHeight / 2
+    let bestPage = pages[0]!
+    let bestDist = Infinity
+
+    for (const page of pages) {
+      const wrapper = container.querySelector(
+        `[data-page-wrapper="${page}"]`,
+      ) as HTMLElement | null
+      if (!wrapper) continue
+      const rect = wrapper.getBoundingClientRect()
+      const pageCenter = rect.top + rect.height / 2
+      const dist = Math.abs(pageCenter - centerY)
+      if (dist < bestDist) {
+        bestDist = dist
+        bestPage = page
+      }
+    }
+    return bestPage
+  }, [numPages, getMountedPageNumbers])
+
   const updateProgressFromScrollRef = useRef<(() => void) | null>(null)
 
   const updateProgressFromScroll = useCallback(() => {
@@ -162,20 +196,17 @@ export function PdfReader({
     if (!container || !pdf || numPages === 0) return
 
     const scrollTop = container.scrollTop
-    const maxScroll = container.scrollHeight - container.clientHeight
-    const ratio = maxScroll > 0 ? scrollTop / maxScroll : 0
-    const currentPage = Math.min(
-      numPages,
-      Math.max(1, Math.round(ratio * numPages) || 1),
-    )
+    const currentPage = getCurrentPage()
+    const percent = (currentPage / numPages) * 100
+
     onLocationLabel(`第 ${currentPage} / ${numPages} 页`)
-    onProgress(ratio * 100)
+    onProgress(percent)
     setPageInput(String(currentPage))
     saveProgress({
       position: { page: currentPage, scrollTop, scale: scaleRef.current },
-      progressPercent: ratio * 100,
+      progressPercent: percent,
     })
-  }, [numPages, onLocationLabel, onProgress, saveProgress])
+  }, [getCurrentPage, numPages, onLocationLabel, onProgress, saveProgress])
 
   useEffect(() => {
     updateProgressFromScrollRef.current = updateProgressFromScroll
@@ -404,14 +435,6 @@ export function PdfReader({
   const changeScale = (next: number) => {
     setScale(Math.min(2.5, Math.max(0.6, next)))
   }
-
-  const getCurrentPage = useCallback(() => {
-    const container = containerRef.current
-    if (!container || numPages === 0) return 1
-    const maxScroll = container.scrollHeight - container.clientHeight
-    const ratio = maxScroll > 0 ? container.scrollTop / maxScroll : 0
-    return Math.min(numPages, Math.max(1, Math.round(ratio * numPages) || 1))
-  }, [numPages])
 
   const goToPage = useCallback(
     async (target: number, smooth = true) => {

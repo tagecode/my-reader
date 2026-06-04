@@ -83,6 +83,10 @@ export function EpubReader({
         setToc(view.book?.toc ?? [])
         onLocationLabel(view.book?.metadata?.title ?? book.title)
 
+        if (typeof saved?.progress_percent === 'number') {
+          onProgress(saved.progress_percent)
+        }
+
         view.addEventListener('relocate', ((e: CustomEvent) => {
           const detail = e.detail as {
             fraction?: number

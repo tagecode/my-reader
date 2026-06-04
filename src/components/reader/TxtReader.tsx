@@ -82,7 +82,13 @@ export function TxtReader({
     const last = segments[segments.length - 1]!
     const loadedEnd = last.byteOffset + last.byteLength
     const maxScroll = el.scrollHeight - el.clientHeight
-    const ratio = maxScroll > 0 ? el.scrollTop / maxScroll : 0
+
+    if (maxScroll <= 0) {
+      if (first === 0 && loadedEnd >= totalBytes) return 100
+      return Math.min(100, (loadedEnd / totalBytes) * 100)
+    }
+
+    const ratio = el.scrollTop / maxScroll
     const readByte = first + (loadedEnd - first) * ratio
     return Math.min(100, (readByte / totalBytes) * 100)
   }, [segments, totalBytes])
@@ -373,6 +379,14 @@ export function TxtReader({
     segments,
     totalBytes,
   ])
+
+  useEffect(() => {
+    if (loading || segments.length === 0) return
+    const id = requestAnimationFrame(() => {
+      saveScrollProgress()
+    })
+    return () => cancelAnimationFrame(id)
+  }, [loading, segments.length, saveScrollProgress])
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current
