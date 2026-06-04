@@ -33,7 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
             <Button
               key={id}
-              variant={page === id ? 'secondary' : 'ghost'}
+              variant={page === id ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setPage(id)}
             >

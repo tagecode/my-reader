@@ -28,47 +28,48 @@
   --color-ring: var(--ring);
 }
 
+/* 品牌色：奶油纸底 + 深棕文字 + 陶土橙主按钮（对齐 icon-source 暖色插画） */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(0.985 0.002 106);
-  --foreground: oklch(0.2 0.02 106);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.02 106);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.02 106);
-  --primary: oklch(0.35 0.06 250);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.94 0.01 106);
-  --secondary-foreground: oklch(0.25 0.02 106);
-  --muted: oklch(0.94 0.01 106);
-  --muted-foreground: oklch(0.5 0.02 106);
-  --accent: oklch(0.94 0.02 250);
-  --accent-foreground: oklch(0.25 0.04 250);
+  --radius: 0.75rem;
+  --background: oklch(0.945 0.018 75);
+  --foreground: oklch(0.32 0.045 55);
+  --card: oklch(0.985 0.008 75);
+  --card-foreground: oklch(0.32 0.045 55);
+  --popover: oklch(0.985 0.008 75);
+  --popover-foreground: oklch(0.32 0.045 55);
+  --primary: oklch(0.52 0.12 40);
+  --primary-foreground: oklch(0.985 0.008 75);
+  --secondary: oklch(0.88 0.028 65);
+  --secondary-foreground: oklch(0.38 0.05 55);
+  --muted: oklch(0.9 0.02 70);
+  --muted-foreground: oklch(0.48 0.04 55);
+  --accent: oklch(0.92 0.035 60);
+  --accent-foreground: oklch(0.35 0.06 45);
   --destructive: oklch(0.55 0.2 25);
-  --border: oklch(0.88 0.01 106);
-  --input: oklch(0.88 0.01 106);
-  --ring: oklch(0.55 0.08 250);
+  --border: oklch(0.82 0.028 65);
+  --input: oklch(0.82 0.028 65);
+  --ring: oklch(0.52 0.12 40);
 }
 
 .dark {
-  --background: oklch(0.16 0.02 250);
-  --foreground: oklch(0.92 0.01 106);
-  --card: oklch(0.2 0.02 250);
-  --card-foreground: oklch(0.92 0.01 106);
-  --popover: oklch(0.2 0.02 250);
-  --popover-foreground: oklch(0.92 0.01 106);
-  --primary: oklch(0.72 0.1 250);
-  --primary-foreground: oklch(0.15 0.02 250);
-  --secondary: oklch(0.25 0.02 250);
-  --secondary-foreground: oklch(0.9 0.01 106);
-  --muted: oklch(0.25 0.02 250);
-  --muted-foreground: oklch(0.65 0.02 106);
-  --accent: oklch(0.28 0.04 250);
-  --accent-foreground: oklch(0.92 0.01 106);
+  --background: oklch(0.22 0.03 55);
+  --foreground: oklch(0.92 0.02 75);
+  --card: oklch(0.26 0.035 55);
+  --card-foreground: oklch(0.92 0.02 75);
+  --popover: oklch(0.26 0.035 55);
+  --popover-foreground: oklch(0.92 0.02 75);
+  --primary: oklch(0.68 0.11 42);
+  --primary-foreground: oklch(0.2 0.04 55);
+  --secondary: oklch(0.32 0.04 55);
+  --secondary-foreground: oklch(0.9 0.02 75);
+  --muted: oklch(0.3 0.03 55);
+  --muted-foreground: oklch(0.68 0.03 65);
+  --accent: oklch(0.34 0.05 50);
+  --accent-foreground: oklch(0.92 0.02 75);
   --destructive: oklch(0.6 0.18 25);
-  --border: oklch(0.3 0.02 250);
-  --input: oklch(0.3 0.02 250);
-  --ring: oklch(0.55 0.08 250);
+  --border: oklch(0.36 0.04 55);
+  --input: oklch(0.36 0.04 55);
+  --ring: oklch(0.68 0.11 42);
 }
 
 @layer base {
@@ -81,6 +82,8 @@
       system-ui,
       -apple-system,
       'Segoe UI',
+      'PingFang SC',
+      'Microsoft YaHei',
       sans-serif;
   }
 }
