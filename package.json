@@ -23,7 +23,8 @@
     "dist": "pnpm icons && pnpm build && electron-builder",
     "dist:mac": "pnpm dist --mac",
     "dist:win": "pnpm dist --win",
-    "dist:linux": "pnpm dist --linux"
+    "dist:linux": "pnpm dist --linux",
+    "test:mvp": "node ./scripts/run-test-mvp.mjs"
   },
   "dependencies": {
     "@fontsource/noto-sans-sc": "^5.2.9",

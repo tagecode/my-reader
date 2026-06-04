@@ -1,14 +1,12 @@
 import Database from 'better-sqlite3'
 import fs from 'node:fs'
 import path from 'node:path'
-import { app } from 'electron'
+import { getDbPath } from '../app-paths'
 import { DB_VERSION, MIGRATIONS } from './schema'
 
 let db: Database.Database | null = null
 
-export function getDbPath(): string {
-  return path.join(app.getPath('userData'), 'my-reader.db')
-}
+export { getDbPath } from '../app-paths'
 
 export function initDatabase(): Database.Database {
   if (db) return db

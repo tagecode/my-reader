@@ -1,10 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { app } from 'electron'
-
-export function getCoversDir(): string {
-  return path.join(app.getPath('userData'), 'covers')
-}
+import { getCoversDir } from '../app-paths'
 
 export async function ensureCoversDir(): Promise<string> {
   const dir = getCoversDir()

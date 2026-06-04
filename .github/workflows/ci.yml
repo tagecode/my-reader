@@ -43,3 +43,6 @@ jobs:
         run: pnpm run build
         env:
           USE_SYSTEM_FUSE: 'true'
+
+      - name: MVP smoke tests
+        run: pnpm run test:mvp
