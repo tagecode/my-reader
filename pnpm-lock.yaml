@@ -44,9 +44,6 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
-      electron:
-        specifier: ^41.2.0
-        version: 41.7.1
       fast-xml-parser:
         specifier: ^5.8.0
         version: 5.8.0
@@ -123,6 +120,9 @@ importers:
       concurrently:
         specifier: ^10.0.0
         version: 10.0.0
+      electron:
+        specifier: ^41.2.0
+        version: 41.7.1
       electron-builder:
         specifier: ^26.8.1
         version: 26.8.1(electron-builder-squirrel-windows@26.8.1)

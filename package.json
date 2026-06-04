@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "description": "纯本地桌面电子书阅读器（EPUB / TXT / PDF）",
   "author": "My Reader",
+  "packageManager": "pnpm@10.11.0",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -23,12 +24,6 @@
     "dist:mac": "pnpm dist --mac",
     "dist:win": "pnpm dist --win",
     "dist:linux": "pnpm dist --linux"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3",
-      "electron"
-    ]
   },
   "dependencies": {
     "@fontsource/noto-sans-sc": "^5.2.9",
