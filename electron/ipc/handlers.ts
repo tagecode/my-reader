@@ -15,7 +15,12 @@ import {
   setSetting,
 } from '../db/settings'
 import { importBooksFromPaths } from '../services/import'
-import { detectTxtEncoding, readTxtFile } from '../services/txt'
+import {
+  detectTxtEncoding,
+  getTxtFileInfo,
+  readTxtChunk,
+  readTxtFile,
+} from '../services/txt'
 import { toMyReaderUrl } from '../protocol'
 
 const SUPPORTED_FILTERS = [
@@ -93,6 +98,21 @@ export function registerIpcHandlers(): void {
     const buf = await fs.readFile(filePath)
     return detectTxtEncoding(buf)
   })
+
+  ipcMain.handle('txt:getInfo', (_event, filePath: string) =>
+    getTxtFileInfo(filePath),
+  )
+
+  ipcMain.handle(
+    'txt:readChunk',
+    (
+      _event,
+      filePath: string,
+      encoding: string,
+      byteOffset: number,
+      maxBytes?: number,
+    ) => readTxtChunk(filePath, encoding, byteOffset, maxBytes),
+  )
 
   ipcMain.handle(
     'txt:read',

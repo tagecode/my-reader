@@ -39,26 +39,3 @@ export function decodeTxtBuffer(buffer: Buffer, encoding: string): string {
     return iconv.decode(buffer, 'UTF-8')
   }
 }
-
-export async function readTxtChunkBase64(
-  readFileBase64: (path: string) => Promise<string>,
-  filePath: string,
-  encoding: string,
-  offset: number,
-  chunkSize: number,
-): Promise<{ text: string; nextOffset: number; done: boolean }> {
-  const fullBase64 = await readFileBase64(filePath)
-  const binary = atob(fullBase64)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-
-  const buf = Buffer.from(bytes)
-  const fullText = decodeTxtBuffer(buf, encoding)
-  const text = fullText.slice(offset, offset + chunkSize)
-  const nextOffset = offset + text.length
-  return {
-    text,
-    nextOffset,
-    done: nextOffset >= fullText.length,
-  }
-}

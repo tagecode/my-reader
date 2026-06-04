@@ -23,7 +23,7 @@ import {
   DEFAULT_SETTINGS,
 } from '../electron/db/settings.ts'
 import { importBooksFromPaths } from '../electron/services/import.ts'
-import { detectTxtEncoding, readTxtFile } from '../electron/services/txt.ts'
+import { detectTxtEncoding, getTxtFileInfo, readTxtChunk, readTxtFile } from '../electron/services/txt.ts'
 import { extractMetadata } from '../electron/services/metadata/index.ts'
 
 function toMyReaderUrl(filePath: string): string {
@@ -270,19 +270,35 @@ async function testAcc009TxtEncoding(
 }
 
 async function testAcc010Performance(fixtures: Awaited<ReturnType<typeof writeFixtures>>) {
-  const size = 1024 * 1024
-  const chunk = '性能测试行。\n'
-  const repeats = Math.ceil(size / Buffer.byteLength(chunk, 'utf8'))
-  const bigPath = path.join(path.dirname(fixtures.txt), 'perf-1mb.txt')
-  await fs.writeFile(bigPath, chunk.repeat(repeats), 'utf8')
+  const line = '性能测试行。\n'
+  const lineBytes = Buffer.byteLength(line, 'utf8')
+  const targetSize = 2 * 1024 * 1024 + lineBytes
+  const bigPath = path.join(path.dirname(fixtures.txt), 'perf-2mb.txt')
+  await fs.writeFile(bigPath, line.repeat(Math.ceil(targetSize / lineBytes)), 'utf8')
+
+  const info = await getTxtFileInfo(bigPath)
+  assert(info.totalBytes > info.chunkBytes, '应用 2MB 大文件 fixture')
 
   const t0 = performance.now()
-  const { text, truncated } = await readTxtFile(bigPath, 'UTF-8')
+  let offset = 0
+  let chunks = 0
+  let chars = 0
+  while (offset < info.totalBytes) {
+    const chunk = await readTxtChunk(bigPath, 'UTF-8', offset, info.chunkBytes)
+    assert(chunk.text.length > 0, '分块内容为空')
+    chars += chunk.text.length
+    offset += chunk.byteLength
+    chunks++
+    if (!chunk.hasMore) break
+  }
   const elapsed = performance.now() - t0
 
-  assert(!truncated, '1MB 文件不应被截断')
-  assert(text.length > 0, '大文件读取为空')
-  assert(elapsed < 3000, `1MB TXT 读取过慢: ${elapsed.toFixed(0)}ms`)
+  assert(chunks >= 2, `大文件应分 ${chunks} 块读取`)
+  assert(chars > 0, '分块解码字符数为 0')
+  assert(elapsed < 5000, `2MB 分块读取过慢: ${elapsed.toFixed(0)}ms`)
+
+  const full = await readTxtFile(fixtures.txt, 'UTF-8')
+  assert(!full.truncated, '小文件不应标记为截断')
 }
 
 async function testAcc011LocalOnly(tmpData: string) {
@@ -355,7 +371,7 @@ export async function runMvpSmokeTests(tmpData: string): Promise<void> {
       pass('ACC-009', 'TXT 中文编码', 'UTF-8 / GBK / Big5 / GB18030 解码通过')
 
       await testAcc010Performance(fixtures)
-      pass('ACC-010', '普通文件不卡死', '1MB TXT 读取 < 3s')
+      pass('ACC-010', '普通文件不卡死', '2MB TXT 分块读取 < 5s')
 
       await testAcc011LocalOnly(tmpData)
       pass('ACC-011', '数据仅存本机', `DB: ${getDbPath()}`)

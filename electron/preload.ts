@@ -32,6 +32,31 @@ const api = {
     ipcRenderer.invoke('books:toFileUrl', filePath) as Promise<string>,
   detectTxtEncoding: (filePath: string) =>
     ipcRenderer.invoke('txt:detectEncoding', filePath) as Promise<string>,
+  getTxtInfo: (filePath: string) =>
+    ipcRenderer.invoke('txt:getInfo', filePath) as Promise<{
+      totalBytes: number
+      chunkBytes: number
+    }>,
+  readTxtChunk: (
+    filePath: string,
+    encoding: string,
+    byteOffset: number,
+    maxBytes?: number,
+  ) =>
+    ipcRenderer.invoke(
+      'txt:readChunk',
+      filePath,
+      encoding,
+      byteOffset,
+      maxBytes,
+    ) as Promise<{
+      text: string
+      encoding: string
+      byteOffset: number
+      byteLength: number
+      totalBytes: number
+      hasMore: boolean
+    }>,
   readTxt: (filePath: string, encoding: string) =>
     ipcRenderer.invoke('txt:read', filePath, encoding) as Promise<{
       text: string
