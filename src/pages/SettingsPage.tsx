@@ -9,18 +9,106 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageLoading } from '@/components/ui/page-state'
 import { useAppStore } from '@/stores/app-store'
 
+function ReadingSettingsForm({
+  settings,
+  onPersist,
+  onReset,
+}: {
+  settings: Record<string, string>
+  onPersist: (patch: Record<string, string>) => Promise<void>
+  onReset: () => Promise<void>
+}) {
+  const [fontSize, setFontSize] = useState(settings.fontSize ?? '18')
+  const [readingWidth, setReadingWidth] = useState(settings.readingWidth ?? '720')
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>默认阅读设置</CardTitle>
+          <CardDescription>新打开书籍时使用的默认值</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="fontSize">字号 (px)</Label>
+            <Input
+              id="fontSize"
+              type="number"
+              min={12}
+              max={32}
+              className="w-32"
+              value={fontSize}
+              onChange={(e) => setFontSize(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="readingWidth">阅读宽度 (px)</Label>
+            <Input
+              id="readingWidth"
+              type="number"
+              min={480}
+              max={1200}
+              className="w-32"
+              value={readingWidth}
+              onChange={(e) => setReadingWidth(e.target.value)}
+            />
+          </div>
+          <Button onClick={() => void onPersist({ fontSize, readingWidth })}>
+            保存阅读设置
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Button variant="outline" onClick={() => void onReset()}>
+        恢复默认设置
+      </Button>
+    </>
+  )
+}
+
+function ThemeSettings({
+  theme,
+  onThemeChange,
+}: {
+  theme: string
+  onThemeChange: (value: string) => Promise<void>
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>主题</CardTitle>
+        <CardDescription>切换日间或夜间模式，全局生效</CardDescription>
+      </CardHeader>
+      <CardContent className="flex gap-2">
+        <Button
+          variant={theme === 'light' ? 'default' : 'outline'}
+          onClick={() => void onThemeChange('light')}
+        >
+          日间
+        </Button>
+        <Button
+          variant={theme === 'dark' ? 'default' : 'outline'}
+          onClick={() => void onThemeChange('dark')}
+        >
+          夜间
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function SettingsPage() {
   const settings = useAppStore((s) => s.settings)
   const loadSettings = useAppStore((s) => s.loadSettings)
   const applyTheme = useAppStore((s) => s.applyTheme)
   const [dataPath, setDataPath] = useState('')
-  const [fontSize, setFontSize] = useState('18')
-  const [readingWidth, setReadingWidth] = useState('720')
-  const [theme, setTheme] = useState('light')
   const [feedback, setFeedback] = useState<{
     variant: 'success' | 'info'
     message: string
   } | null>(null)
+
+  const settingsFormKey = `${settings.fontSize ?? ''}|${settings.readingWidth ?? ''}|${settings.theme ?? ''}`
+  const theme = settings.theme ?? 'light'
 
   useEffect(() => {
     void loadSettings()
@@ -28,12 +116,6 @@ export function SettingsPage() {
       void window.electronAPI.getDataPath().then(setDataPath)
     }
   }, [loadSettings])
-
-  useEffect(() => {
-    setFontSize(settings.fontSize ?? '18')
-    setReadingWidth(settings.readingWidth ?? '720')
-    setTheme(settings.theme ?? 'light')
-  }, [settings])
 
   const persist = async (patch: Record<string, string>) => {
     if (!window.electronAPI) return
@@ -46,7 +128,6 @@ export function SettingsPage() {
   }
 
   const handleThemeChange = async (value: string) => {
-    setTheme(value)
     applyTheme(value)
     await persist({ theme: value })
   }
@@ -57,9 +138,6 @@ export function SettingsPage() {
     await loadSettings()
     const next = useAppStore.getState().settings
     applyTheme(next.theme ?? 'light')
-    setFontSize(next.fontSize ?? '18')
-    setReadingWidth(next.readingWidth ?? '720')
-    setTheme(next.theme ?? 'light')
     setFeedback({ variant: 'info', message: '已恢复默认阅读设置' })
     setTimeout(() => setFeedback(null), 2500)
   }
@@ -79,70 +157,14 @@ export function SettingsPage() {
         </TabsList>
 
         <TabsContent value="reading" className="flex flex-col gap-4 pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>主题</CardTitle>
-              <CardDescription>切换日间或夜间模式，全局生效</CardDescription>
-            </CardHeader>
-            <CardContent className="flex gap-2">
-              <Button
-                variant={theme === 'light' ? 'default' : 'outline'}
-                onClick={() => void handleThemeChange('light')}
-              >
-                日间
-              </Button>
-              <Button
-                variant={theme === 'dark' ? 'default' : 'outline'}
-                onClick={() => void handleThemeChange('dark')}
-              >
-                夜间
-              </Button>
-            </CardContent>
-          </Card>
+          <ThemeSettings theme={theme} onThemeChange={handleThemeChange} />
 
-          <Card>
-            <CardHeader>
-              <CardTitle>默认阅读设置</CardTitle>
-              <CardDescription>新打开书籍时使用的默认值</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="fontSize">字号 (px)</Label>
-                <Input
-                  id="fontSize"
-                  type="number"
-                  min={12}
-                  max={32}
-                  className="w-32"
-                  value={fontSize}
-                  onChange={(e) => setFontSize(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="readingWidth">阅读宽度 (px)</Label>
-                <Input
-                  id="readingWidth"
-                  type="number"
-                  min={480}
-                  max={1200}
-                  className="w-32"
-                  value={readingWidth}
-                  onChange={(e) => setReadingWidth(e.target.value)}
-                />
-              </div>
-              <Button
-                onClick={() =>
-                  void persist({ fontSize, readingWidth })
-                }
-              >
-                保存阅读设置
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Button variant="outline" onClick={() => void handleReset()}>
-            恢复默认设置
-          </Button>
+          <ReadingSettingsForm
+            key={settingsFormKey}
+            settings={settings}
+            onPersist={persist}
+            onReset={handleReset}
+          />
         </TabsContent>
 
         <TabsContent value="data" className="pt-4">

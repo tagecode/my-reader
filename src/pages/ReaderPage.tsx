@@ -10,11 +10,20 @@ import type { Book } from '@/types/electron'
 
 type LoadState = 'loading' | 'ready' | 'error'
 
-export function ReaderPage() {
-  const currentBookId = useAppStore((s) => s.currentBookId)
+function patchSetting(key: string, value: string) {
+  useAppStore.setState((state) => ({
+    settings: { ...state.settings, [key]: value },
+  }))
+  void window.electronAPI?.setSetting(key, value)
+}
+
+function ReaderContent({ bookId }: { bookId: string }) {
   const settings = useAppStore((s) => s.settings)
   const setPage = useAppStore((s) => s.setPage)
   const setCurrentBookId = useAppStore((s) => s.setCurrentBookId)
+
+  const fontSize = Number(settings.fontSize ?? 18)
+  const readingWidth = Number(settings.readingWidth ?? 720)
 
   const [book, setBook] = useState<Book | null>(null)
   const [fileUrl, setFileUrl] = useState<string | null>(null)
@@ -23,13 +32,6 @@ export function ReaderPage() {
   const [progressPercent, setProgressPercent] = useState(0)
   const [locationLabel, setLocationLabel] = useState('')
   const [showSettings, setShowSettings] = useState(false)
-  const [fontSize, setFontSize] = useState(18)
-  const [readingWidth, setReadingWidth] = useState(720)
-
-  useEffect(() => {
-    setFontSize(Number(settings.fontSize ?? 18))
-    setReadingWidth(Number(settings.readingWidth ?? 720))
-  }, [settings.fontSize, settings.readingWidth])
 
   const handleBack = useCallback(() => {
     setCurrentBookId(null)
@@ -37,21 +39,13 @@ export function ReaderPage() {
   }, [setCurrentBookId, setPage])
 
   useEffect(() => {
-    if (!currentBookId || !window.electronAPI) {
-      setLoadState('error')
-      setLoadError('未选择书籍')
-      return
-    }
+    if (!window.electronAPI) return
 
     let cancelled = false
-    setLoadState('loading')
-    setLoadError(null)
-    setBook(null)
-    setFileUrl(null)
 
     const load = async () => {
       try {
-        const data = await window.electronAPI.getBook(currentBookId)
+        const data = await window.electronAPI.getBook(bookId)
         const b = data as Book | null
         if (cancelled) return
 
@@ -89,7 +83,7 @@ export function ReaderPage() {
     return () => {
       cancelled = true
     }
-  }, [currentBookId])
+  }, [bookId])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -161,14 +155,10 @@ export function ReaderPage() {
           <ReaderSettingsPanel
             fontSize={fontSize}
             readingWidth={readingWidth}
-            onFontSizeChange={(v) => {
-              setFontSize(v)
-              void window.electronAPI?.setSetting('fontSize', String(v))
-            }}
-            onReadingWidthChange={(v) => {
-              setReadingWidth(v)
-              void window.electronAPI?.setSetting('readingWidth', String(v))
-            }}
+            onFontSizeChange={(v) => patchSetting('fontSize', String(v))}
+            onReadingWidthChange={(v) =>
+              patchSetting('readingWidth', String(v))
+            }
           />
         )}
       </div>
@@ -180,4 +170,27 @@ export function ReaderPage() {
       </footer>
     </div>
   )
+}
+
+export function ReaderPage() {
+  const currentBookId = useAppStore((s) => s.currentBookId)
+  const setPage = useAppStore((s) => s.setPage)
+  const setCurrentBookId = useAppStore((s) => s.setCurrentBookId)
+
+  const handleBack = useCallback(() => {
+    setCurrentBookId(null)
+    setPage('library')
+  }, [setCurrentBookId, setPage])
+
+  if (!currentBookId || !window.electronAPI) {
+    return (
+      <PageError
+        title="无法打开书籍"
+        message="未选择书籍"
+        onBack={handleBack}
+      />
+    )
+  }
+
+  return <ReaderContent key={currentBookId} bookId={currentBookId} />
 }

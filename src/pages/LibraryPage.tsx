@@ -36,6 +36,39 @@ type ImportFeedback = {
   details: string[]
 }
 
+function CoverSyncBanner({
+  loadBooks,
+  searchQuery,
+}: {
+  loadBooks: (search?: string) => Promise<void>
+  searchQuery: string
+}) {
+  const [syncing, setSyncing] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    void generateMissingPdfCovers()
+      .then((n) => {
+        if (cancelled || n === 0) return
+        void loadBooks(searchQuery || undefined)
+      })
+      .finally(() => {
+        if (!cancelled) setSyncing(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [loadBooks, searchQuery])
+
+  if (!syncing) return null
+
+  return (
+    <p className="text-center text-xs text-muted-foreground">
+      正在生成 PDF 封面…
+    </p>
+  )
+}
+
 export function LibraryPage() {
   const books = useAppStore((s) => s.books)
   const loading = useAppStore((s) => s.loading)
@@ -55,27 +88,10 @@ export function LibraryPage() {
   const [importFeedback, setImportFeedback] = useState<ImportFeedback | null>(
     null,
   )
-  const [coversSyncing, setCoversSyncing] = useState(false)
 
   useEffect(() => {
     void loadBooks()
   }, [loadBooks])
-
-  useEffect(() => {
-    let cancelled = false
-    setCoversSyncing(true)
-    void generateMissingPdfCovers()
-      .then((n) => {
-        if (cancelled || n === 0) return
-        void loadBooks(searchQuery || undefined)
-      })
-      .finally(() => {
-        if (!cancelled) setCoversSyncing(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [loadBooks, searchQuery])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -253,11 +269,11 @@ export function LibraryPage() {
         </div>
       )}
 
-      {coversSyncing && (
-        <p className="text-center text-xs text-muted-foreground">
-          正在生成 PDF 封面…
-        </p>
-      )}
+      <CoverSyncBanner
+        key={searchQuery}
+        loadBooks={loadBooks}
+        searchQuery={searchQuery}
+      />
 
       <Dialog open={!!removeTarget} onOpenChange={() => setRemoveTarget(null)}>
         <DialogContent>

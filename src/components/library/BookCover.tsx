@@ -8,25 +8,29 @@ interface BookCoverProps {
 
 export function BookCover({ book, className }: BookCoverProps) {
   const [src, setSrc] = useState<string | null>(null)
+  const [loadedBookId, setLoadedBookId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!book.cover_path || !window.electronAPI) {
-      setSrc(null)
-      return
-    }
+    if (!book.cover_path || !window.electronAPI) return
     let cancelled = false
     void window.electronAPI.getCover(book.id).then((data) => {
-      if (!cancelled) setSrc(data)
+      if (!cancelled) {
+        setLoadedBookId(book.id)
+        setSrc(data)
+      }
     })
     return () => {
       cancelled = true
     }
   }, [book.id, book.cover_path])
 
-  if (src) {
+  const displaySrc =
+    book.cover_path && loadedBookId === book.id ? src : null
+
+  if (displaySrc) {
     return (
       <img
-        src={src}
+        src={displaySrc}
         alt={book.title}
         className={className ?? 'size-full object-cover'}
       />

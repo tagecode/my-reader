@@ -46,7 +46,9 @@ export function PdfReader({
   const [error, setError] = useState<string | null>(null)
   const { loadProgress, saveProgress } = useReadingProgress(book.id)
 
-  scaleRef.current = scale
+  useEffect(() => {
+    scaleRef.current = scale
+  }, [scale])
 
   const paintPage = useCallback(
     async (pageNum: number, targetScale: number, generation: number) => {
@@ -175,7 +177,9 @@ export function PdfReader({
     })
   }, [numPages, onLocationLabel, onProgress, saveProgress])
 
-  updateProgressFromScrollRef.current = updateProgressFromScroll
+  useEffect(() => {
+    updateProgressFromScrollRef.current = updateProgressFromScroll
+  }, [updateProgressFromScroll])
 
   const rerenderAtCurrentScale = useCallback(async () => {
     const container = containerRef.current
@@ -280,6 +284,8 @@ export function PdfReader({
       }
     }
 
+    const painting = paintingRef.current
+
     void load()
     return () => {
       cancelled = true
@@ -287,7 +293,7 @@ export function PdfReader({
       initialMountedRef.current = false
       setDocReady(false)
       renderGenRef.current += 1
-      paintingRef.current.clear()
+      painting.clear()
       pdfRef.current?.destroy()
       pdfRef.current = null
     }

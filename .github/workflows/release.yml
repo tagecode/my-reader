@@ -1,0 +1,135 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform }} / ${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+            arch: arm64
+            artifact_glob: |
+              release/MyReader-v*-mac-arm64.dmg
+              release/MyReader-v*-mac-arm64.zip
+          - os: macos-15-intel
+            platform: mac
+            arch: x64
+            artifact_glob: |
+              release/MyReader-v*-mac-x64.dmg
+              release/MyReader-v*-mac-x64.zip
+          - os: windows-latest
+            platform: win
+            arch: x64
+            artifact_glob: release/MyReader-v*-win-x64.exe
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            artifact_glob: |
+              release/MyReader-v*-linux-x64.AppImage
+              release/MyReader-v*-linux-x64.deb
+          - os: ubuntu-24.04-arm
+            platform: linux
+            arch: arm64
+            artifact_glob: |
+              release/MyReader-v*-linux-arm64.AppImage
+              release/MyReader-v*-linux-arm64.deb
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/')
+        run: node scripts/check-release-version.mjs
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install Linux build dependencies
+        if: matrix.platform == 'linux'
+        run: bash scripts/ci-install-linux-build-deps.sh
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Regenerate macOS icon
+        if: matrix.platform == 'mac'
+        run: pnpm run icons
+
+      - name: Package (${{ matrix.platform }} / ${{ matrix.arch }})
+        run: node scripts/ci-package.mjs
+        env:
+          CI_PLATFORM: ${{ matrix.platform }}
+          CI_ARCH: ${{ matrix.arch }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USE_SYSTEM_FUSE: 'true'
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-${{ matrix.arch }}-dist
+          path: ${{ matrix.artifact_glob }}
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/**/MyReader-v*.dmg
+            artifacts/**/MyReader-v*.zip
+            artifacts/**/MyReader-v*.exe
+            artifacts/**/MyReader-v*.AppImage
+            artifacts/**/MyReader-v*.deb
+          generate_release_notes: true
+          body: |
+            ## 安装说明
+
+            产物命名：`MyReader-v{version}-{os}-{arch}.{ext}`
+
+            | 平台 | 架构 | 格式 | 说明 |
+            |------|------|------|------|
+            | macOS | arm64 | `.dmg` / `.zip` | Apple Silicon |
+            | macOS | x64 | `.dmg` / `.zip` | Intel Mac |
+            | Windows | x64 | `.exe` (NSIS) | 安装包 |
+            | Linux | x64 / arm64 | `.AppImage` / `.deb` | AppImage 免安装；deb 用 `sudo dpkg -i` 安装 |
+
+            未签名构建：macOS 首次打开可能需在「系统设置 → 隐私与安全性」中允许运行。
+
+            纯本地阅读器，支持 EPUB / TXT / PDF，书库与进度保存在本机。

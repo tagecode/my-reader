@@ -1,8 +1,9 @@
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-  "appId": "com.myreader.app",
+  "appId": "com.tagecode.myreader",
   "productName": "摸鱼阅读器",
   "copyright": "Copyright © 2026 My Reader",
+  "artifactName": "MyReader-v${version}-${os}-${arch}.${ext}",
   "directories": {
     "output": "release",
     "buildResources": "build"
@@ -31,8 +32,9 @@
   },
   "linux": {
     "icon": "build/icons",
-    "target": ["AppImage"],
-    "category": "Office;Viewer"
+    "target": ["AppImage", "deb"],
+    "category": "Office;Viewer",
+    "maintainer": "My Reader"
   },
   "nsis": {
     "oneClick": false,
