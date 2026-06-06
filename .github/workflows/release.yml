@@ -23,18 +23,18 @@ jobs:
             platform: mac
             arch: arm64
             artifact_glob: |
-              release/MyReader-v*-mac-arm64.dmg
-              release/MyReader-v*-mac-arm64.zip
+              release/MyReader-v*-mac-*.dmg
+              release/MyReader-v*-mac-*.zip
           - os: macos-15-intel
             platform: mac
             arch: x64
             artifact_glob: |
-              release/MyReader-v*-mac-x64.dmg
-              release/MyReader-v*-mac-x64.zip
+              release/MyReader-v*-mac-*.dmg
+              release/MyReader-v*-mac-*.zip
           - os: windows-latest
             platform: win
             arch: x64
-            artifact_glob: release/MyReader-v*-win-x64.exe
+            artifact_glob: release/MyReader-v*-win-*.exe
           - os: ubuntu-latest
             platform: linux
             arch: x64

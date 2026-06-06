@@ -3,7 +3,6 @@
   "appId": "com.tagecode.myreader",
   "productName": "摸鱼阅读器",
   "copyright": "Copyright © 2026 My Reader",
-  "artifactName": "MyReader-v${version}-${platform}-${arch}.${ext}",
   "publish": null,
   "directories": {
     "output": "release",
@@ -19,15 +18,20 @@
   "asar": true,
   "asarUnpack": ["**/node_modules/better-sqlite3/**"],
   "mac": {
+    "artifactName": "MyReader-v${version}-mac-${arch}.${ext}",
     "category": "public.app-category.productivity",
     "icon": "build/icon.icns",
     "target": ["dmg", "zip"],
+    "sign": false,
+    "hardenedRuntime": false,
+    "gatekeeperAssess": false,
     "extendInfo": {
       "CFBundleName": "摸鱼阅读器",
       "CFBundleDisplayName": "摸鱼阅读器"
     }
   },
   "win": {
+    "artifactName": "MyReader-v${version}-win-${arch}.${ext}",
     "icon": "build/icon.ico",
     "target": ["nsis"]
   },
