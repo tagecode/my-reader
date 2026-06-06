@@ -39,6 +39,9 @@
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "uninstallDisplayName": "${productName} v${version}",
     "installerIcon": "build/icon.ico",
     "uninstallerIcon": "build/icon.ico"
   },
