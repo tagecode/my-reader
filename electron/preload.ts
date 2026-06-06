@@ -3,6 +3,8 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron'
 const api = {
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   getDataPath: () => ipcRenderer.invoke('app:getDataPath') as Promise<string>,
+  setWindowTitle: (title: string) =>
+    ipcRenderer.invoke('app:setWindowTitle', title),
   listBooks: (search?: string) =>
     ipcRenderer.invoke('books:list', search) as Promise<unknown[]>,
   getBook: (id: string) => ipcRenderer.invoke('books:get', id),

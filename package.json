@@ -3,8 +3,17 @@
   "productName": "摸鱼阅读器",
   "private": true,
   "version": "0.1.0",
-  "description": "纯本地桌面电子书阅读器（EPUB / TXT / PDF）",
-  "author": "My Reader",
+  "description": "一款跨平台、纯本地优先的桌面电子阅读器，目前支持 EPUB、PDF、TXT 三种核心格式",
+  "author": "TageCode <tagecode@hotmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/tagecode/my-reader#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tagecode/my-reader.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tagecode/my-reader/issues"
+  },
   "packageManager": "pnpm@10.11.0",
   "type": "module",
   "main": "dist-electron/main.js",

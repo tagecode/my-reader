@@ -119,6 +119,8 @@ jobs:
             artifacts/**/MyReader-v*.deb
           generate_release_notes: true
           body: |
+            首个 MVP 公开发布。完整变更见 [CHANGELOG.md](https://github.com/tagecode/my-reader/blob/main/CHANGELOG.md)。
+
             ## 安装说明
 
             产物命名：`MyReader-v{version}-{os}-{arch}.{ext}`
@@ -130,6 +132,11 @@ jobs:
             | Windows | x64 | `.exe` (NSIS) | 安装包 |
             | Linux | x64 / arm64 | `.AppImage` / `.deb` | AppImage 免安装；deb 用 `sudo dpkg -i` 安装 |
 
-            未签名构建：macOS 首次打开可能需在「系统设置 → 隐私与安全性」中允许运行。
+            ## 代码签名说明
+
+            当前构建**未进行 Apple / Windows 代码签名**（CI 中 `CSC_IDENTITY_AUTO_DISCOVERY=false`）。
+
+            - **macOS**：首次打开可能提示「无法验证开发者」。请在「系统设置 → 隐私与安全性」中点击「仍要打开」，或右键应用选择「打开」。
+            - **Windows**：SmartScreen 可能显示「未知发布者」警告，属未签名安装包的常见现象。
 
             纯本地阅读器，支持 EPUB / TXT / PDF，书库与进度保存在本机。

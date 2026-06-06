@@ -1,4 +1,4 @@
-import { dialog, ipcMain } from 'electron'
+import { BrowserWindow, dialog, ipcMain } from 'electron'
 import fs from 'node:fs/promises'
 import {
   getBookById,
@@ -31,6 +31,14 @@ export function registerIpcHandlers(): void {
   initDatabase()
 
   ipcMain.handle('app:getDataPath', () => getDbPath())
+
+  ipcMain.handle('app:setWindowTitle', (_event, title: string) => {
+    const win =
+      BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+    if (win && typeof title === 'string' && title.length > 0) {
+      win.setTitle(title)
+    }
+  })
 
   ipcMain.handle('books:list', (_event, search?: string) => listBooks(search))
 
