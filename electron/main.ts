@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, Menu, shell } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -38,6 +38,7 @@ function createWindow(): void {
     minWidth: 900,
     minHeight: 600,
     title: '摸鱼阅读器',
+    autoHideMenuBar: true,
     ...(iconPath ? { icon: iconPath } : {}),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
@@ -46,6 +47,12 @@ function createWindow(): void {
       sandbox: true,
     },
   })
+
+  // Win/Linux：彻底隐藏窗口内菜单栏（Alt 也不会弹出）
+  mainWindow.setMenu(null)
+  if (process.platform !== 'darwin') {
+    mainWindow.setMenuBarVisibility(false)
+  }
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url)
@@ -79,6 +86,9 @@ if (!gotLock) {
   })
 
   app.whenReady().then(() => {
+    // macOS 保留系统菜单栏区域但清空应用菜单；Win/Linux 移除菜单栏
+    Menu.setApplicationMenu(null)
+
     setupLocalFileProtocol()
     registerIpcHandlers()
     createWindow()
