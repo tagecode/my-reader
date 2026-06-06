@@ -190,7 +190,7 @@ export function LibraryPage() {
           <Button
             size="icon"
             variant={libraryView === 'grid' ? 'secondary' : 'ghost'}
-            onClick={() => setLibraryView('grid')}
+            onClick={() => void setLibraryView('grid')}
             aria-label={t('library.gridView')}
             disabled={importing}
           >
@@ -199,7 +199,7 @@ export function LibraryPage() {
           <Button
             size="icon"
             variant={libraryView === 'list' ? 'secondary' : 'ghost'}
-            onClick={() => setLibraryView('list')}
+            onClick={() => void setLibraryView('list')}
             aria-label={t('library.listView')}
             disabled={importing}
           >

@@ -5,6 +5,7 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   fontSize: '18',
   readingWidth: '720',
   locale: 'system',
+  libraryView: 'list',
 }
 
 export function getSetting(key: string): string | null {

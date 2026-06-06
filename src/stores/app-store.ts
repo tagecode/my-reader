@@ -6,6 +6,10 @@ import type { Book } from '@/types/electron'
 export type AppPage = 'library' | 'reader' | 'settings'
 export type LibraryView = 'grid' | 'list'
 
+export function parseLibraryView(value: string | undefined | null): LibraryView {
+  return value === 'grid' ? 'grid' : 'list'
+}
+
 interface AppState {
   page: AppPage
   libraryView: LibraryView
@@ -17,7 +21,7 @@ interface AppState {
   error: string | null
   settings: Record<string, string>
   setPage: (page: AppPage) => void
-  setLibraryView: (view: LibraryView) => void
+  setLibraryView: (view: LibraryView) => Promise<void>
   setSearchQuery: (query: string) => void
   setCurrentBookId: (id: string | null) => void
   setLoading: (loading: boolean) => void
@@ -30,7 +34,7 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set, get) => ({
   page: 'library',
-  libraryView: 'grid',
+  libraryView: 'list',
   books: [],
   currentBookId: null,
   searchQuery: '',
@@ -45,7 +49,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       void get().loadBooks(get().searchQuery || undefined)
     }
   },
-  setLibraryView: (view) => set({ libraryView: view }),
+  setLibraryView: async (view) => {
+    set({ libraryView: view })
+    if (!window.electronAPI) return
+    await window.electronAPI.setSetting('libraryView', view)
+    set((state) => ({
+      settings: { ...state.settings, libraryView: view },
+    }))
+  },
   setSearchQuery: (query) => set({ searchQuery: query }),
   setCurrentBookId: (id) => set({ currentBookId: id }),
   setLoading: (loading) => set({ loading }),
@@ -69,7 +80,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     >
     get().applyTheme(settings.theme ?? 'light')
     await changeAppLocale(settings.locale ?? 'system')
-    set({ settings })
+    set({
+      settings,
+      libraryView: parseLibraryView(settings.libraryView),
+    })
   },
 
   loadBooks: async (search) => {

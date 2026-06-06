@@ -222,10 +222,17 @@ async function testAcc005Theme() {
 async function testAcc006ReadingLayout() {
   assert(DEFAULT_SETTINGS.fontSize === '18', '默认字号异常')
   assert(DEFAULT_SETTINGS.readingWidth === '720', '默认阅读宽度异常')
+  assert(DEFAULT_SETTINGS.libraryView === 'list', '默认书库排列应为 list')
   setSetting('fontSize', '20')
   setSetting('readingWidth', '800')
+  setSetting('libraryView', 'grid')
   const all = getAllSettings()
   assert(all.fontSize === '20' && all.readingWidth === '800', '阅读布局设置未持久化')
+  assert(all.libraryView === 'grid', '书库排列未持久化')
+  setSetting('libraryView', 'list')
+
+  const settingsPage = await readSource('src/pages/SettingsPage.tsx')
+  assert(settingsPage.includes('LibraryViewSettings'), '设置页缺少书库排列控件')
 }
 
 async function testAcc007EpubToc() {
