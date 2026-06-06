@@ -4,7 +4,7 @@ import { BookCover } from '@/components/library/BookCover'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatPercent } from '@/lib/utils'
+import { cn, formatPercent } from '@/lib/utils'
 import type { Book } from '@/types/electron'
 
 interface BookCardProps {
@@ -14,23 +14,80 @@ interface BookCardProps {
   onRemove: (book: Book) => void
 }
 
+interface BookCoverButtonProps {
+  book: Book
+  openLabel: string
+  onOpen: () => void
+  variant: 'grid' | 'list'
+}
+
+function BookCoverButton({
+  book,
+  openLabel,
+  onOpen,
+  variant,
+}: BookCoverButtonProps) {
+  const { t } = useTranslation()
+  const isList = variant === 'list'
+
+  return (
+    <button
+      type="button"
+      className={cn(
+        'group/cover relative shrink-0 cursor-pointer overflow-hidden border bg-muted',
+        'transition-[box-shadow,transform] duration-200 ease-out',
+        'hover:z-10 hover:shadow-md hover:ring-2 hover:ring-primary/50',
+        'active:scale-[0.98]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        isList ? 'size-14 rounded-md' : 'aspect-[3/4] w-full border-b',
+      )}
+      onClick={onOpen}
+      aria-label={openLabel}
+    >
+      <BookCover
+        book={book}
+        className="size-full object-cover transition-transform duration-200 group-hover/cover:scale-105"
+      />
+      <span
+        aria-hidden
+        className={cn(
+          'pointer-events-none absolute inset-0 flex items-center justify-center',
+          'bg-black/0 transition-colors duration-200 group-hover/cover:bg-black/45',
+          isList ? 'flex-col gap-0.5' : 'flex-col gap-1.5',
+        )}
+      >
+        <BookOpenIcon
+          className={cn(
+            'text-white opacity-0 transition-opacity duration-200 group-hover/cover:opacity-100',
+            isList ? 'size-4' : 'size-8',
+          )}
+        />
+        {!isList && (
+          <span className="text-sm font-medium text-white opacity-0 transition-opacity duration-200 group-hover/cover:opacity-100">
+            {t('common.read')}
+          </span>
+        )}
+      </span>
+    </button>
+  )
+}
+
 export function BookCard({ book, view, onOpen, onRemove }: BookCardProps) {
   const { t } = useTranslation()
   const progress = book.progress_percent ?? 0
   const openLabel = t('library.openBookLabel', { title: book.title })
   const author = book.author ?? t('common.unknownAuthor')
+  const handleOpen = () => onOpen(book)
 
   if (view === 'list') {
     return (
       <div className="flex items-center gap-4 rounded-lg border bg-card p-3">
-        <button
-          type="button"
-          className="size-14 shrink-0 overflow-hidden rounded-md border transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          onClick={() => onOpen(book)}
-          aria-label={openLabel}
-        >
-          <BookCover book={book} />
-        </button>
+        <BookCoverButton
+          book={book}
+          openLabel={openLabel}
+          onOpen={handleOpen}
+          variant="list"
+        />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="truncate font-medium">{book.title}</div>
           <div className="truncate text-sm text-muted-foreground">{author}</div>
@@ -56,14 +113,12 @@ export function BookCard({ book, view, onOpen, onRemove }: BookCardProps) {
 
   return (
     <Card className="overflow-hidden py-0">
-      <button
-        type="button"
-        className="aspect-[3/4] w-full overflow-hidden border-b transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-        onClick={() => onOpen(book)}
-        aria-label={openLabel}
-      >
-        <BookCover book={book} />
-      </button>
+      <BookCoverButton
+        book={book}
+        openLabel={openLabel}
+        onOpen={handleOpen}
+        variant="grid"
+      />
       <CardHeader className="gap-1 pb-2">
         <CardTitle className="line-clamp-2 text-base">{book.title}</CardTitle>
         <p className="truncate text-sm text-muted-foreground">{author}</p>
