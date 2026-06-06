@@ -39,14 +39,14 @@ jobs:
             platform: linux
             arch: x64
             artifact_glob: |
-              release/MyReader-v*-linux-x64.AppImage
-              release/MyReader-v*-linux-x64.deb
+              release/MyReader-v*-linux-*.AppImage
+              release/MyReader-v*-linux-*.deb
           - os: ubuntu-24.04-arm
             platform: linux
             arch: arm64
             artifact_glob: |
-              release/MyReader-v*-linux-arm64.AppImage
-              release/MyReader-v*-linux-arm64.deb
+              release/MyReader-v*-linux-*.AppImage
+              release/MyReader-v*-linux-*.deb
 
     runs-on: ${{ matrix.os }}
 

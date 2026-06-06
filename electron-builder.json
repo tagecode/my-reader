@@ -3,7 +3,8 @@
   "appId": "com.tagecode.myreader",
   "productName": "摸鱼阅读器",
   "copyright": "Copyright © 2026 My Reader",
-  "artifactName": "MyReader-v${version}-${os}-${arch}.${ext}",
+  "artifactName": "MyReader-v${version}-${platform}-${arch}.${ext}",
+  "publish": null,
   "directories": {
     "output": "release",
     "buildResources": "build"

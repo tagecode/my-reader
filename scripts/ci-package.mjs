@@ -3,6 +3,7 @@
  * 环境变量：CI_PLATFORM=mac|win|linux，CI_ARCH=arm64|x64
  */
 import { execSync } from 'node:child_process'
+import { setTimeout } from 'node:timers/promises'
 
 const platform = process.env.CI_PLATFORM
 const arch = process.env.CI_ARCH
@@ -16,6 +17,27 @@ if (!platform || !arch) {
 function run(cmd) {
   console.log(`> ${cmd}`)
   execSync(cmd, { stdio: 'inherit', env: process.env })
+}
+
+/** @param {string} cmd @param {number} [maxAttempts] */
+async function runWithRetry(cmd, maxAttempts = 3) {
+  let lastError
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      run(cmd)
+      return
+    } catch (error) {
+      lastError = error
+      if (attempt < maxAttempts) {
+        const waitSec = attempt * 5
+        console.warn(
+          `命令失败（第 ${attempt}/${maxAttempts} 次），${waitSec}s 后重试…`,
+        )
+        await setTimeout(waitSec * 1000)
+      }
+    }
+  }
+  throw lastError
 }
 
 run('pnpm icons')
@@ -33,4 +55,5 @@ if (platform === 'mac') {
   process.exit(1)
 }
 
-run(`pnpm exec electron-builder ${builderArgs}`)
+// CI 由 softprops/action-gh-release 上传产物，禁止 electron-builder 隐式 publish
+await runWithRetry(`pnpm exec electron-builder ${builderArgs} --publish never`)
