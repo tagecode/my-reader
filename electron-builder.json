@@ -4,6 +4,7 @@
   "productName": "摸鱼阅读器",
   "copyright": "Copyright © 2026 My Reader",
   "publish": null,
+  "forceCodeSigning": false,
   "directories": {
     "output": "release",
     "buildResources": "build"
@@ -22,7 +23,10 @@
     "category": "public.app-category.productivity",
     "icon": "build/icon.icns",
     "target": ["dmg", "zip"],
+    "type": "development",
+    "identity": null,
     "sign": false,
+    "notarize": false,
     "hardenedRuntime": false,
     "gatekeeperAssess": false,
     "extendInfo": {
@@ -36,6 +40,7 @@
     "target": ["nsis"]
   },
   "linux": {
+    "artifactName": "MyReader-v${version}-linux-${arch}.${ext}",
     "icon": "build/icons",
     "target": ["AppImage", "deb"],
     "category": "Office;Viewer",
