@@ -57,19 +57,19 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Verify tag matches package.json
         if: startsWith(github.ref, 'refs/tags/')
         run: node scripts/check-release-version.mjs
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 10.11.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'pnpm'
@@ -94,7 +94,7 @@ jobs:
           USE_SYSTEM_FUSE: 'true'
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.platform }}-${{ matrix.arch }}-dist
           path: ${{ matrix.artifact_glob }}
@@ -108,7 +108,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: artifacts
           merge-multiple: true
