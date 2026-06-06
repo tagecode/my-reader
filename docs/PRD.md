@@ -7,8 +7,8 @@
 | 产品名称 | 摸鱼阅读器 |
 | 英文名称 | My Reader |
 | 文档类型 | Product Requirement Document |
-| 当前版本 | v0.1 |
-| 文档状态 | 草案 |
+| 当前版本 | v0.1.0 |
+| 文档状态 | MVP 发布 |
 | 目标平台 | macOS、Windows、Linux |
 | 技术方向 | Electron + React + TypeScript + shadcn/ui + Tailwind CSS |
 | 参考文档 | `docs/Feasibility.md`、`docs/FeatureList.md` |

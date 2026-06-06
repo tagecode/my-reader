@@ -15,7 +15,7 @@ A cross-platform, **local-first** desktop e-book reader. Supports EPUB, TXT, and
 ## Features
 
 - **Multi-format reading** — EPUB (table of contents), PDF (page jump), TXT (chunked loading)
-- **Local library** — Import, search, grid/list views, cover thumbnails
+- **Local library** — Import, search, cover thumbnails; **list (horizontal) or grid (vertical) layout**, configurable in Settings (list is default)
 - **Reading progress** — Auto-saved; resume where you left off after reopening the app
 - **Reader settings** — Day/night theme, font size, reading width, font family
 - **Chinese text encodings** — Auto-detect UTF-8, GBK, Big5, GB18030, and other common encodings for TXT

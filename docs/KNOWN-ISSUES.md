@@ -1,10 +1,14 @@
 # 摸鱼阅读器 — 已知问题（MVP v0.1.0）
 
+最后更新：2026-06-06
+
 ## 打包与平台
 
 | 问题 | 影响 | 说明 |
 |------|------|------|
-| Windows / Linux 安装包未在本机实测 | 中 | 当前主要在 macOS 上验证 `pnpm pack` / `pnpm dist`；其他平台需在对应系统上复测。 |
+| Windows 安装包验证有限 | 低 | 已在 Windows x64 本机验证 `pnpm dist:win` 与 NSIS 安装；Release CI 产物建议再冒烟测试。 |
+| Linux / macOS 安装包待 Release 实机确认 | 中 | CI 已配置多平台矩阵；首次公开发布后需从 GitHub Releases 下载验证。 |
+| 安装包未代码签名 | 中 | macOS / Windows 首次打开可能有安全提示；见 `CHANGELOG.md` 与 Release 说明。 |
 | 文件关联需安装后手动确认 | 低 | `electron-builder` 已声明 `.epub` / `.txt` / `.pdf`；系统是否设为默认打开方式取决于用户授权。 |
 | `better-sqlite3` 原生模块 | 中 | 打包依赖 `npmRebuild`；若目标平台缺少编译工具链，需在 CI 使用对应 runner 预编译。 |
 
@@ -34,3 +38,4 @@
 - 书库排序、最近阅读
 - 书内搜索与全文索引
 - 更多格式与 PDF 性能优化
+- 代码签名（macOS 公证 / Windows Authenticode）
