@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { EpubReader } from '@/components/reader/EpubReader'
 import { PdfReader } from '@/components/reader/PdfReader'
 import { ReaderSettingsPanel } from '@/components/reader/ReaderSettingsPanel'
@@ -18,6 +19,7 @@ function patchSetting(key: string, value: string) {
 }
 
 function ReaderContent({ bookId }: { bookId: string }) {
+  const { t } = useTranslation()
   const settings = useAppStore((s) => s.settings)
   const setPage = useAppStore((s) => s.setPage)
   const setCurrentBookId = useAppStore((s) => s.setCurrentBookId)
@@ -51,7 +53,7 @@ function ReaderContent({ bookId }: { bookId: string }) {
 
         if (!b) {
           setLoadState('error')
-          setLoadError('书籍不存在，可能已从书库移除')
+          setLoadError(t('reader.bookMissing'))
           return
         }
 
@@ -63,7 +65,7 @@ function ReaderContent({ bookId }: { bookId: string }) {
           if (cancelled) return
           if (!url) {
             setLoadState('error')
-            setLoadError('无法打开 EPUB 文件，请检查文件是否仍存在')
+            setLoadError(t('reader.epubMissing'))
             return
           }
           setFileUrl(url)
@@ -74,7 +76,7 @@ function ReaderContent({ bookId }: { bookId: string }) {
         if (cancelled) return
         setLoadState('error')
         setLoadError(
-          err instanceof Error ? err.message : '打开书籍失败，请稍后重试',
+          err instanceof Error ? err.message : t('reader.openFailed'),
         )
       }
     }
@@ -83,7 +85,7 @@ function ReaderContent({ bookId }: { bookId: string }) {
     return () => {
       cancelled = true
     }
-  }, [bookId])
+  }, [bookId, t])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -94,14 +96,14 @@ function ReaderContent({ bookId }: { bookId: string }) {
   }, [handleBack])
 
   if (loadState === 'loading') {
-    return <PageLoading message="正在打开书籍…" />
+    return <PageLoading message={t('reader.opening')} />
   }
 
   if (loadState === 'error' || !book) {
     return (
       <PageError
-        title="无法打开书籍"
-        message={loadError ?? '未知错误'}
+        title={t('reader.cannotOpen')}
+        message={loadError ?? t('common.unknownError')}
         onBack={handleBack}
       />
     )
@@ -173,6 +175,7 @@ function ReaderContent({ bookId }: { bookId: string }) {
 }
 
 export function ReaderPage() {
+  const { t } = useTranslation()
   const currentBookId = useAppStore((s) => s.currentBookId)
   const setPage = useAppStore((s) => s.setPage)
   const setCurrentBookId = useAppStore((s) => s.setCurrentBookId)
@@ -185,8 +188,8 @@ export function ReaderPage() {
   if (!currentBookId || !window.electronAPI) {
     return (
       <PageError
-        title="无法打开书籍"
-        message="未选择书籍"
+        title={t('reader.cannotOpen')}
+        message={t('reader.notSelected')}
         onBack={handleBack}
       />
     )

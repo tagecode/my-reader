@@ -1,6 +1,8 @@
 import * as pdfjs from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PageError } from '@/components/ui/page-state'
@@ -24,6 +26,7 @@ export function PdfReader({
   onLocationLabel,
   onBack,
 }: PdfReaderProps) {
+  const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const pdfRef = useRef<pdfjs.PDFDocumentProxy | null>(null)
   const scaleRef = useRef(1.2)
@@ -133,7 +136,7 @@ export function PdfReader({
 
         wrapper.replaceChildren()
         if (canvas.width === 0 || canvas.height === 0) {
-          wrapper.textContent = `第 ${pageNum} 页无法渲染`
+          wrapper.textContent = t('reader.pdfPageRenderFailed', { page: pageNum })
           wrapper.className =
             'flex min-h-32 items-center justify-center px-2 text-sm text-muted-foreground'
         } else {
@@ -143,7 +146,7 @@ export function PdfReader({
         paintingRef.current.delete(pageNum)
       }
     },
-    [paintPage],
+    [paintPage, t],
   )
 
   const getMountedPageNumbers = useCallback((): number[] => {
@@ -199,14 +202,16 @@ export function PdfReader({
     const currentPage = getCurrentPage()
     const percent = (currentPage / numPages) * 100
 
-    onLocationLabel(`第 ${currentPage} / ${numPages} 页`)
+    onLocationLabel(
+      t('reader.pdfPageLabel', { current: currentPage, total: numPages }),
+    )
     onProgress(percent)
     setPageInput(String(currentPage))
     saveProgress({
       position: { page: currentPage, scrollTop, scale: scaleRef.current },
       progressPercent: percent,
     })
-  }, [getCurrentPage, numPages, onLocationLabel, onProgress, saveProgress])
+  }, [getCurrentPage, numPages, onLocationLabel, onProgress, saveProgress, t])
 
   useEffect(() => {
     updateProgressFromScrollRef.current = updateProgressFromScroll
@@ -251,13 +256,13 @@ export function PdfReader({
       setError(null)
       try {
         if (!window.electronAPI?.readPdfBuffer) {
-          throw new Error('无法读取 PDF 文件')
+          throw new Error(i18n.t('reader.pdfReadFailed'))
         }
 
         const bytes = await window.electronAPI.readPdfBuffer(book.file_path)
         if (cancelled) return
         if (!bytes?.length) {
-          throw new Error('PDF 文件为空或无法读取')
+          throw new Error(i18n.t('reader.pdfEmpty'))
         }
 
         await ensurePdfjsChineseFonts()
@@ -268,10 +273,10 @@ export function PdfReader({
 
         pdfRef.current = pdf
         setNumPages(pdf.numPages)
-        onLocationLabel(`共 ${pdf.numPages} 页`)
+        onLocationLabel(t('reader.pdfTotalPages', { count: pdf.numPages }))
 
         if (pdf.numPages === 0) {
-          throw new Error('PDF 没有可显示的页面')
+          throw new Error(i18n.t('reader.pdfNoPages'))
         }
 
         const saved = await loadProgress()
@@ -306,7 +311,8 @@ export function PdfReader({
         if (!cancelled) setDocReady(true)
       } catch (err) {
         if (!cancelled) {
-          const msg = err instanceof Error ? err.message : 'PDF 加载失败'
+          const msg =
+            err instanceof Error ? err.message : i18n.t('reader.pdfLoadFailed')
           setError(msg)
           console.error('PDF load error', err)
         }
@@ -328,7 +334,7 @@ export function PdfReader({
       pdfRef.current?.destroy()
       pdfRef.current = null
     }
-  }, [book.file_path, book.id, loadProgress, onLocationLabel])
+  }, [book.file_path, book.id, loadProgress, onLocationLabel, t])
 
   /** 文档解析完成后，在滚动容器已挂载到 DOM 再绘制页面 */
   useEffect(() => {
@@ -499,7 +505,7 @@ export function PdfReader({
   if (error) {
     return (
       <PageError
-        title="无法阅读此 PDF"
+        title={t('reader.pdfCannotRead')}
         message={error}
         detail={book.file_path}
         onBack={onBack}
@@ -516,10 +522,10 @@ export function PdfReader({
           disabled={rerendering}
           onClick={() => changeScale(scale - 0.1)}
         >
-          缩小
+          {t('common.zoomOut')}
         </Button>
         <span className="min-w-12 text-center text-xs text-muted-foreground">
-          {rerendering ? '重绘中…' : `${Math.round(scale * 100)}%`}
+          {rerendering ? t('common.rerendering') : `${Math.round(scale * 100)}%`}
         </span>
         <Button
           size="sm"
@@ -527,7 +533,7 @@ export function PdfReader({
           disabled={rerendering}
           onClick={() => changeScale(scale + 0.1)}
         >
-          放大
+          {t('common.zoomIn')}
         </Button>
         <div className="flex items-center gap-1">
           <Input
@@ -538,16 +544,16 @@ export function PdfReader({
           />
           <span className="text-xs text-muted-foreground">/ {numPages}</span>
           <Button size="sm" variant="secondary" onClick={jumpToPage}>
-            跳转
+            {t('common.jump')}
           </Button>
         </div>
-        <span className="text-xs text-muted-foreground">方向键 / 空格翻页</span>
+        <span className="text-xs text-muted-foreground">{t('reader.pdfKeysHint')}</span>
       </div>
       <div
         ref={containerRef}
         className="relative min-h-0 flex-1 overflow-y-auto bg-muted/30 py-4 outline-none"
         tabIndex={0}
-        title="方向键 / 空格 / PageUp·PageDown 翻页，Home·End 首尾，Ctrl+滚轮缩放"
+        title={t('reader.pdfKeysHintFull')}
         onScroll={updateProgressFromScroll}
         onWheel={(e) => {
           if (!e.ctrlKey && !e.metaKey) return
@@ -557,7 +563,7 @@ export function PdfReader({
       >
         {docLoading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 text-muted-foreground">
-            正在加载 PDF…
+            {t('reader.pdfLoading')}
           </div>
         )}
       </div>

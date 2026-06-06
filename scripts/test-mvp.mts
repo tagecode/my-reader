@@ -1,7 +1,7 @@
 /**
  * MVP smoke tests — maps to docs/MVP.md §6 (ACC-001 … ACC-011).
  *
- * Headless: main-process import / DB / progress / settings / TXT encoding / security.
+ * Headless: main-process import / DB / progress / settings / TXT encoding / i18n / security.
  * UI-only items (rendering, TOC click, theme DOM) are verified via static source checks.
  *
  * Usage: pnpm test:mvp
@@ -321,6 +321,54 @@ async function testSecurityStatic() {
   assert(/sandbox:\s*true/.test(main), 'main: sandbox 未启用')
 }
 
+async function testAcc012I18n() {
+  assert(DEFAULT_SETTINGS.locale === 'system', '默认 locale 应为 system')
+
+  setSetting('locale', 'zh-TW')
+  assert(getAllSettings().locale === 'zh-TW', 'locale zh-TW 未持久化')
+  setSetting('locale', 'en')
+  assert(getAllSettings().locale === 'en', 'locale en 未持久化')
+  setSetting('locale', 'system')
+  assert(getAllSettings().locale === 'system', 'locale system 未持久化')
+
+  const {
+    resolveAppLocale,
+    resolveLanguageTag,
+    resolveSystemLocaleFromTags,
+  } = await import('../src/lib/i18n/locale.ts')
+
+  assert(resolveLanguageTag('zh-CN') === 'zh-CN', 'zh-CN 映射失败')
+  assert(resolveLanguageTag('zh-Hans') === 'zh-CN', 'zh-Hans 应映射简体')
+  assert(resolveLanguageTag('zh-TW') === 'zh-TW', 'zh-TW 映射失败')
+  assert(resolveLanguageTag('zh-HK') === 'zh-TW', 'zh-HK 应映射繁体')
+  assert(resolveLanguageTag('en-US') === 'en', 'en-US 应映射英文')
+  assert(resolveLanguageTag('ja-JP') === null, '日语不应直接映射')
+
+  assert(
+    resolveSystemLocaleFromTags(['ja-JP', 'fr-FR']) === 'en',
+    '未支持系统语言应回退英文',
+  )
+  assert(
+    resolveSystemLocaleFromTags(['zh-TW', 'en-US']) === 'zh-TW',
+    '繁体系统语言应优先',
+  )
+  assert(resolveAppLocale('zh-CN') === 'zh-CN', '手动简体偏好')
+  assert(resolveAppLocale('zh-TW') === 'zh-TW', '手动繁体偏好')
+  assert(resolveAppLocale('en') === 'en', '手动英文偏好')
+
+  const settingsSrc = await readSource('electron/db/settings.ts')
+  assert(settingsSrc.includes("locale: 'system'"), 'DEFAULT_SETTINGS 缺少 locale')
+
+  const i18nIndex = await readSource('src/lib/i18n/index.ts')
+  assert(i18nIndex.includes("'zh-CN'"), 'i18n 缺少 zh-CN 资源')
+  assert(i18nIndex.includes("'zh-TW'"), 'i18n 缺少 zh-TW 资源')
+  assert(i18nIndex.includes('en:'), 'i18n 缺少 en 资源')
+
+  const settingsPage = await readSource('src/pages/SettingsPage.tsx')
+  assert(settingsPage.includes('LanguageSettings'), '设置页缺少语言设置')
+  assert(settingsPage.includes('changeAppLocale'), '设置页缺少 changeAppLocale')
+}
+
 async function testFormatDetection() {
   assert(detectFormat('/a/book.epub') === 'epub', 'epub 格式识别失败')
   assert(detectFormat('/a/book.TXT') === 'txt', 'txt 格式识别失败')
@@ -375,6 +423,13 @@ export async function runMvpSmokeTests(tmpData: string): Promise<void> {
 
       await testAcc011LocalOnly(tmpData)
       pass('ACC-011', '数据仅存本机', `DB: ${getDbPath()}`)
+
+      await testAcc012I18n()
+      pass(
+        'ACC-012',
+        '界面国际化',
+        'locale 持久化 + 简中/繁中/英文资源 + 系统语言映射',
+      )
 
       await testSecurityStatic()
       pass('SEC', '渲染进程安全配置', 'contextIsolation + sandbox + 无 nodeIntegration')

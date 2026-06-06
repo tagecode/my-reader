@@ -4,6 +4,7 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   theme: 'light',
   fontSize: '18',
   readingWidth: '720',
+  locale: 'system',
 }
 
 export function getSetting(key: string): string | null {

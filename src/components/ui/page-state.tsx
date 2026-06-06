@@ -1,4 +1,5 @@
 import { AlertCircleIcon, Loader2Icon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -8,9 +9,10 @@ interface PageLoadingProps {
 }
 
 export function PageLoading({
-  message = '加载中…',
+  message,
   className,
 }: PageLoadingProps) {
+  const { t } = useTranslation()
   return (
     <div
       className={cn(
@@ -19,7 +21,7 @@ export function PageLoading({
       )}
     >
       <Loader2Icon className="size-8 animate-spin" aria-hidden />
-      <p className="text-sm">{message}</p>
+      <p className="text-sm">{message ?? t('common.loading')}</p>
     </div>
   )
 }
@@ -34,13 +36,14 @@ interface PageErrorProps {
 }
 
 export function PageError({
-  title = '出错了',
+  title,
   message,
   detail,
   onRetry,
   onBack,
   className,
 }: PageErrorProps) {
+  const { t } = useTranslation()
   return (
     <div
       className={cn(
@@ -50,7 +53,7 @@ export function PageError({
     >
       <AlertCircleIcon className="size-10 text-destructive" aria-hidden />
       <div className="flex max-w-md flex-col gap-2">
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <h2 className="text-lg font-semibold">{title ?? t('page.errorTitle')}</h2>
         <p className="text-sm text-muted-foreground">{message}</p>
         {detail && (
           <p className="break-all text-xs text-muted-foreground/80">{detail}</p>
@@ -60,12 +63,12 @@ export function PageError({
         <div className="flex flex-wrap justify-center gap-2">
           {onRetry && (
             <Button variant="secondary" size="sm" onClick={onRetry}>
-              重试
+              {t('common.retry')}
             </Button>
           )}
           {onBack && (
             <Button variant="outline" size="sm" onClick={onBack}>
-              返回书库
+              {t('common.backToLibrary')}
             </Button>
           )}
         </div>
@@ -80,6 +83,7 @@ interface EmptySearchProps {
 }
 
 export function EmptySearch({ query, className }: EmptySearchProps) {
+  const { t } = useTranslation()
   return (
     <div
       className={cn(
@@ -87,8 +91,8 @@ export function EmptySearch({ query, className }: EmptySearchProps) {
         className,
       )}
     >
-      <p className="text-sm">没有找到与「{query}」相关的书籍</p>
-      <p className="text-xs">试试其他关键词，或清空搜索框</p>
+      <p className="text-sm">{t('search.noResults', { query })}</p>
+      <p className="text-xs">{t('search.hint')}</p>
     </div>
   )
 }

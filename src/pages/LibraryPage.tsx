@@ -5,6 +5,7 @@ import {
   UploadIcon,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { BookCard } from '@/components/library/BookCard'
 import { EmptyLibrary } from '@/components/library/EmptyLibrary'
 import { Button } from '@/components/ui/button'
@@ -60,16 +61,19 @@ function CoverSyncBanner({
     }
   }, [loadBooks, searchQuery])
 
+  const { t } = useTranslation()
+
   if (!syncing) return null
 
   return (
     <p className="text-center text-xs text-muted-foreground">
-      正在生成 PDF 封面…
+      {t('library.pdfCoverSync')}
     </p>
   )
 }
 
 export function LibraryPage() {
+  const { t } = useTranslation()
   const books = useAppStore((s) => s.books)
   const loading = useAppStore((s) => s.loading)
   const importing = useAppStore((s) => s.importing)
@@ -176,7 +180,7 @@ export function LibraryPage() {
           <SearchIcon className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="pl-9"
-            placeholder="搜索书名或作者…"
+            placeholder={t('library.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             disabled={importing}
@@ -187,7 +191,7 @@ export function LibraryPage() {
             size="icon"
             variant={libraryView === 'grid' ? 'secondary' : 'ghost'}
             onClick={() => setLibraryView('grid')}
-            aria-label="网格视图"
+            aria-label={t('library.gridView')}
             disabled={importing}
           >
             <GridIcon />
@@ -196,7 +200,7 @@ export function LibraryPage() {
             size="icon"
             variant={libraryView === 'list' ? 'secondary' : 'ghost'}
             onClick={() => setLibraryView('list')}
-            aria-label="列表视图"
+            aria-label={t('library.listView')}
             disabled={importing}
           >
             <ListIcon />
@@ -204,13 +208,13 @@ export function LibraryPage() {
         </div>
         <Button onClick={() => void handleImport()} disabled={importing}>
           <UploadIcon />
-          {importing ? '导入中…' : '导入'}
+          {importing ? t('common.importing') : t('common.import')}
         </Button>
       </div>
 
       {importing && (
-        <StatusMessage variant="info" title="正在导入">
-          正在解析文件并写入书库，请稍候…
+        <StatusMessage variant="info" title={t('library.importingTitle')}>
+          {t('library.importingMessage')}
         </StatusMessage>
       )}
 
@@ -226,7 +230,11 @@ export function LibraryPage() {
                 <li key={line}>{line}</li>
               ))}
               {importFeedback.details.length > 5 && (
-                <li>还有 {importFeedback.details.length - 5} 项…</li>
+                <li>
+                  {t('common.moreItems', {
+                    count: importFeedback.details.length - 5,
+                  })}
+                </li>
               )}
             </ul>
           )}
@@ -234,13 +242,13 @@ export function LibraryPage() {
       )}
 
       {error && (
-        <StatusMessage variant="error" title="书库加载失败">
+        <StatusMessage variant="error" title={t('library.loadFailed')}>
           {error}
         </StatusMessage>
       )}
 
       {loading && books.length === 0 ? (
-        <PageLoading message="正在加载书库…" />
+        <PageLoading message={t('library.loading')} />
       ) : showEmptyLibrary ? (
         <EmptyLibrary
           onImport={() => void handleImport()}
@@ -278,17 +286,17 @@ export function LibraryPage() {
       <Dialog open={!!removeTarget} onOpenChange={() => setRemoveTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>移除书籍</DialogTitle>
+            <DialogTitle>{t('library.removeTitle')}</DialogTitle>
             <DialogDescription>
-              确定从书库移除「{removeTarget?.title}」？不会删除磁盘上的原文件。
+              {t('library.removeDescription', { title: removeTarget?.title })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRemoveTarget(null)}>
-              取消
+              {t('common.cancel')}
             </Button>
             <Button variant="destructive" onClick={() => void handleRemoveConfirm()}>
-              移除
+              {t('common.remove')}
             </Button>
           </DialogFooter>
         </DialogContent>

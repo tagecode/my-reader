@@ -1,4 +1,5 @@
 import { BookOpenIcon, Trash2Icon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { BookCover } from '@/components/library/BookCover'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,8 +15,10 @@ interface BookCardProps {
 }
 
 export function BookCard({ book, view, onOpen, onRemove }: BookCardProps) {
+  const { t } = useTranslation()
   const progress = book.progress_percent ?? 0
-  const openLabel = `阅读《${book.title}》`
+  const openLabel = t('library.openBookLabel', { title: book.title })
+  const author = book.author ?? t('common.unknownAuthor')
 
   if (view === 'list') {
     return (
@@ -30,20 +33,18 @@ export function BookCard({ book, view, onOpen, onRemove }: BookCardProps) {
         </button>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="truncate font-medium">{book.title}</div>
-          <div className="truncate text-sm text-muted-foreground">
-            {book.author ?? '未知作者'}
-          </div>
+          <div className="truncate text-sm text-muted-foreground">{author}</div>
           <div className="flex items-center gap-2">
             <Badge variant="secondary">{book.format.toUpperCase()}</Badge>
             <span className="text-xs text-muted-foreground">
-              进度 {formatPercent(progress)}
+              {t('common.progress')} {formatPercent(progress)}
             </span>
           </div>
         </div>
         <div className="flex shrink-0 gap-2">
           <Button size="sm" onClick={() => onOpen(book)}>
             <BookOpenIcon />
-            阅读
+            {t('common.read')}
           </Button>
           <Button size="sm" variant="outline" onClick={() => onRemove(book)}>
             <Trash2Icon />
@@ -65,9 +66,7 @@ export function BookCard({ book, view, onOpen, onRemove }: BookCardProps) {
       </button>
       <CardHeader className="gap-1 pb-2">
         <CardTitle className="line-clamp-2 text-base">{book.title}</CardTitle>
-        <p className="truncate text-sm text-muted-foreground">
-          {book.author ?? '未知作者'}
-        </p>
+        <p className="truncate text-sm text-muted-foreground">{author}</p>
       </CardHeader>
       <CardContent className="flex items-center gap-2 pt-0 pb-2">
         <Badge variant="secondary">{book.format.toUpperCase()}</Badge>
@@ -78,7 +77,7 @@ export function BookCard({ book, view, onOpen, onRemove }: BookCardProps) {
       <CardFooter className="gap-2 pb-4">
         <Button className="flex-1" size="sm" onClick={() => onOpen(book)}>
           <BookOpenIcon />
-          阅读
+          {t('common.read')}
         </Button>
         <Button size="icon" variant="outline" onClick={() => onRemove(book)}>
           <Trash2Icon />

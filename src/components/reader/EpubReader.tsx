@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { PageLoading } from '@/components/ui/page-state'
+import i18n from '@/lib/i18n'
 import { useReadingProgress } from '@/hooks/useReadingProgress'
 import type { Book } from '@/types/electron'
 
@@ -38,6 +40,7 @@ export function EpubReader({
   onLocationLabel,
   onOpenError,
 }: EpubReaderProps) {
+  const { t } = useTranslation()
   const hostRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<FoliateViewElement | null>(null)
   const [toc, setToc] = useState<TocItem[]>([])
@@ -111,7 +114,7 @@ export function EpubReader({
         const msg =
           err instanceof Error
             ? err.message
-            : 'EPUB 解析失败，文件可能已损坏或格式不受支持'
+            : i18n.t('reader.epubParseFailed')
         onOpenError?.(msg)
       }
     }
@@ -183,14 +186,16 @@ export function EpubReader({
   }
 
   if (loading) {
-    return <PageLoading message="正在加载 EPUB…" />
+    return <PageLoading message={t('reader.epubLoading')} />
   }
 
   return (
     <div className="flex min-h-0 flex-1 bg-background">
       {toc.length > 0 && (
         <aside className="flex w-56 shrink-0 flex-col gap-1 overflow-y-auto border-r p-2 text-sm">
-          <p className="px-2 py-1 font-medium text-muted-foreground">目录</p>
+          <p className="px-2 py-1 font-medium text-muted-foreground">
+            {t('reader.toc')}
+          </p>
           <TocTree items={toc} onSelect={goToHref} />
         </aside>
       )}
@@ -199,7 +204,7 @@ export function EpubReader({
         className="reader-host flex min-h-0 min-w-0 flex-1 [&_foliate-view]:size-full"
         style={{ fontSize: `${fontSize}px` }}
         tabIndex={0}
-        title="方向键 / 空格翻页"
+        title={t('reader.epubKeysHint')}
       />
     </div>
   )
@@ -214,6 +219,8 @@ function TocTree({
   onSelect: (href: string) => void
   depth?: number
 }) {
+  const { t } = useTranslation()
+
   return (
     <ul className="flex flex-col gap-0.5">
       {items.map((item, i) => (
@@ -224,7 +231,7 @@ function TocTree({
             style={{ paddingLeft: `${8 + depth * 12}px` }}
             onClick={() => void onSelect(item.href)}
           >
-            {item.label || '章节'}
+            {item.label || t('common.chapter')}
           </button>
           {item.subitems && item.subitems.length > 0 && (
             <TocTree items={item.subitems} onSelect={onSelect} depth={depth + 1} />

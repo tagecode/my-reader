@@ -1,4 +1,5 @@
 import { BookOpenIcon, UploadIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 
 interface EmptyLibraryProps {
@@ -12,6 +13,8 @@ export function EmptyLibrary({
   dragActive,
   disabled,
 }: EmptyLibraryProps) {
+  const { t } = useTranslation()
+
   return (
     <div
       className={`flex flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-dashed p-12 text-center transition-colors ${
@@ -20,14 +23,14 @@ export function EmptyLibrary({
     >
       <BookOpenIcon className="size-16 text-muted-foreground" />
       <div className="flex flex-col gap-2">
-        <h2 className="text-xl font-semibold">书库还是空的</h2>
+        <h2 className="text-xl font-semibold">{t('library.emptyTitle')}</h2>
         <p className="max-w-md text-muted-foreground">
-          导入 EPUB、TXT 或 PDF 电子书，或将文件拖拽到此处
+          {t('library.emptyDescription')}
         </p>
       </div>
       <Button onClick={onImport} disabled={disabled}>
         <UploadIcon />
-        {disabled ? '导入中…' : '导入书籍'}
+        {disabled ? t('common.importing') : t('library.importBooks')}
       </Button>
     </div>
   )

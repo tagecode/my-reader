@@ -1,4 +1,5 @@
 import { generatePdfCoversForBooks } from '@/lib/generatePdfCovers'
+import i18n from '@/lib/i18n'
 import type { ImportBooksResult } from '@/types/electron'
 import type { StatusVariant } from '@/components/ui/status-message'
 
@@ -11,14 +12,17 @@ export function formatImportFeedback(result: ImportBooksResult): {
   const { imported, errors } = result
   if (imported.length === 0 && errors.length === 0) return null
 
-  const details = errors.map(
-    (e) => `${basename(e.path)}：${e.error}`,
+  const details = errors.map((e) =>
+    i18n.t('import.fileError', {
+      name: basename(e.path),
+      error: e.error,
+    }),
   )
 
   if (imported.length > 0 && errors.length === 0) {
     return {
       variant: 'success',
-      message: `成功导入 ${imported.length} 本书`,
+      message: i18n.t('import.success', { count: imported.length }),
       details: [],
     }
   }
@@ -26,19 +30,22 @@ export function formatImportFeedback(result: ImportBooksResult): {
   if (imported.length > 0 && errors.length > 0) {
     return {
       variant: 'warning',
-      title: `已导入 ${imported.length} 本，${errors.length} 个失败`,
-      message: '部分文件未能加入书库，请查看下方详情。',
+      title: i18n.t('import.partialTitle', {
+        imported: imported.length,
+        failed: errors.length,
+      }),
+      message: i18n.t('import.partialMessage'),
       details,
     }
   }
 
   return {
     variant: 'error',
-    title: '导入失败',
+    title: i18n.t('import.failedTitle'),
     message:
       errors.length === 1
         ? errors[0].error
-        : `${errors.length} 个文件均未能导入`,
+        : i18n.t('import.allFailed', { count: errors.length }),
     details: errors.length > 1 ? details : [],
   }
 }
@@ -53,7 +60,13 @@ export async function importBookPaths(
   paths: string[],
 ): Promise<ImportBooksResult> {
   if (!window.electronAPI) {
-    return { imported: [], errors: paths.map((p) => ({ path: p, error: '应用未就绪' })) }
+    return {
+      imported: [],
+      errors: paths.map((p) => ({
+        path: p,
+        error: i18n.t('errors.appNotReady'),
+      })),
+    }
   }
 
   const result = (await window.electronAPI.importPaths(

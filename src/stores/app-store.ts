@@ -1,4 +1,6 @@
 import { create } from 'zustand'
+import { changeAppLocale } from '@/lib/i18n/change-locale'
+import i18n from '@/lib/i18n'
 import type { Book } from '@/types/electron'
 
 export type AppPage = 'library' | 'reader' | 'settings'
@@ -66,6 +68,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       string
     >
     get().applyTheme(settings.theme ?? 'light')
+    await changeAppLocale(settings.locale ?? 'system')
     set({ settings })
   },
 
@@ -78,7 +81,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (err) {
       set({
         loading: false,
-        error: err instanceof Error ? err.message : '加载书库失败',
+        error:
+          err instanceof Error
+            ? err.message
+            : i18n.t('library.loadBooksFailed'),
       })
     }
   },

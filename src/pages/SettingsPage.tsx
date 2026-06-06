@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -7,7 +8,16 @@ import { Separator } from '@/components/ui/separator'
 import { StatusMessage } from '@/components/ui/status-message'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageLoading } from '@/components/ui/page-state'
+import { changeAppLocale } from '@/lib/i18n/change-locale'
+import type { LocalePreference } from '@/lib/i18n/locale'
 import { useAppStore } from '@/stores/app-store'
+
+const LOCALE_OPTIONS: { value: LocalePreference; labelKey: string }[] = [
+  { value: 'system', labelKey: 'settings.languageSystem' },
+  { value: 'zh-CN', labelKey: 'settings.languageZhCN' },
+  { value: 'zh-TW', labelKey: 'settings.languageZhTW' },
+  { value: 'en', labelKey: 'settings.languageEn' },
+]
 
 function ReadingSettingsForm({
   settings,
@@ -18,6 +28,7 @@ function ReadingSettingsForm({
   onPersist: (patch: Record<string, string>) => Promise<void>
   onReset: () => Promise<void>
 }) {
+  const { t } = useTranslation()
   const [fontSize, setFontSize] = useState(settings.fontSize ?? '18')
   const [readingWidth, setReadingWidth] = useState(settings.readingWidth ?? '720')
 
@@ -25,12 +36,12 @@ function ReadingSettingsForm({
     <>
       <Card>
         <CardHeader>
-          <CardTitle>默认阅读设置</CardTitle>
-          <CardDescription>新打开书籍时使用的默认值</CardDescription>
+          <CardTitle>{t('settings.readingDefaultsTitle')}</CardTitle>
+          <CardDescription>{t('settings.readingDefaultsDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="fontSize">字号 (px)</Label>
+            <Label htmlFor="fontSize">{t('settings.fontSizeLabel')}</Label>
             <Input
               id="fontSize"
               type="number"
@@ -42,7 +53,7 @@ function ReadingSettingsForm({
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="readingWidth">阅读宽度 (px)</Label>
+            <Label htmlFor="readingWidth">{t('settings.readingWidthLabel')}</Label>
             <Input
               id="readingWidth"
               type="number"
@@ -54,13 +65,13 @@ function ReadingSettingsForm({
             />
           </div>
           <Button onClick={() => void onPersist({ fontSize, readingWidth })}>
-            保存阅读设置
+            {t('settings.saveReading')}
           </Button>
         </CardContent>
       </Card>
 
       <Button variant="outline" onClick={() => void onReset()}>
-        恢复默认设置
+        {t('settings.resetDefaults')}
       </Button>
     </>
   )
@@ -73,31 +84,64 @@ function ThemeSettings({
   theme: string
   onThemeChange: (value: string) => Promise<void>
 }) {
+  const { t } = useTranslation()
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>主题</CardTitle>
-        <CardDescription>切换日间或夜间模式，全局生效</CardDescription>
+        <CardTitle>{t('settings.themeTitle')}</CardTitle>
+        <CardDescription>{t('settings.themeDescription')}</CardDescription>
       </CardHeader>
       <CardContent className="flex gap-2">
         <Button
           variant={theme === 'light' ? 'default' : 'outline'}
           onClick={() => void onThemeChange('light')}
         >
-          日间
+          {t('reader.dayMode')}
         </Button>
         <Button
           variant={theme === 'dark' ? 'default' : 'outline'}
           onClick={() => void onThemeChange('dark')}
         >
-          夜间
+          {t('reader.nightMode')}
         </Button>
       </CardContent>
     </Card>
   )
 }
 
+function LanguageSettings({
+  locale,
+  onLocaleChange,
+}: {
+  locale: string
+  onLocaleChange: (value: LocalePreference) => Promise<void>
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('settings.languageTitle')}</CardTitle>
+        <CardDescription>{t('settings.languageDescription')}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        {LOCALE_OPTIONS.map(({ value, labelKey }) => (
+          <Button
+            key={value}
+            variant={locale === value ? 'default' : 'outline'}
+            onClick={() => void onLocaleChange(value)}
+          >
+            {t(labelKey)}
+          </Button>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
 export function SettingsPage() {
+  const { t } = useTranslation()
   const settings = useAppStore((s) => s.settings)
   const loadSettings = useAppStore((s) => s.loadSettings)
   const applyTheme = useAppStore((s) => s.applyTheme)
@@ -107,8 +151,9 @@ export function SettingsPage() {
     message: string
   } | null>(null)
 
-  const settingsFormKey = `${settings.fontSize ?? ''}|${settings.readingWidth ?? ''}|${settings.theme ?? ''}`
+  const settingsFormKey = `${settings.fontSize ?? ''}|${settings.readingWidth ?? ''}|${settings.theme ?? ''}|${settings.locale ?? ''}`
   const theme = settings.theme ?? 'light'
+  const locale = settings.locale ?? 'system'
 
   useEffect(() => {
     void loadSettings()
@@ -123,7 +168,7 @@ export function SettingsPage() {
       await window.electronAPI.setSetting(key, value)
     }
     await loadSettings()
-    setFeedback({ variant: 'success', message: '设置已保存' })
+    setFeedback({ variant: 'success', message: t('settings.saved') })
     setTimeout(() => setFeedback(null), 2500)
   }
 
@@ -132,19 +177,25 @@ export function SettingsPage() {
     await persist({ theme: value })
   }
 
+  const handleLocaleChange = async (value: LocalePreference) => {
+    await changeAppLocale(value)
+    await persist({ locale: value })
+  }
+
   const handleReset = async () => {
     if (!window.electronAPI) return
     await window.electronAPI.resetSettings()
     await loadSettings()
     const next = useAppStore.getState().settings
     applyTheme(next.theme ?? 'light')
-    setFeedback({ variant: 'info', message: '已恢复默认阅读设置' })
+    await changeAppLocale(next.locale ?? 'system')
+    setFeedback({ variant: 'info', message: t('settings.resetDone') })
     setTimeout(() => setFeedback(null), 2500)
   }
 
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-      <h1 className="text-2xl font-semibold">设置</h1>
+      <h1 className="text-2xl font-semibold">{t('settings.title')}</h1>
 
       {feedback && (
         <StatusMessage variant={feedback.variant}>{feedback.message}</StatusMessage>
@@ -152,8 +203,9 @@ export function SettingsPage() {
 
       <Tabs defaultValue="reading">
         <TabsList>
-          <TabsTrigger value="reading">阅读</TabsTrigger>
-          <TabsTrigger value="data">数据</TabsTrigger>
+          <TabsTrigger value="reading">{t('settings.tabReading')}</TabsTrigger>
+          <TabsTrigger value="general">{t('settings.tabGeneral')}</TabsTrigger>
+          <TabsTrigger value="data">{t('settings.tabData')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="reading" className="flex flex-col gap-4 pt-4">
@@ -167,20 +219,24 @@ export function SettingsPage() {
           />
         </TabsContent>
 
+        <TabsContent value="general" className="flex flex-col gap-4 pt-4">
+          <LanguageSettings locale={locale} onLocaleChange={handleLocaleChange} />
+        </TabsContent>
+
         <TabsContent value="data" className="pt-4">
           <Card>
             <CardHeader>
-              <CardTitle>本地数据</CardTitle>
-              <CardDescription>所有书库与进度均保存在本机</CardDescription>
+              <CardTitle>{t('settings.dataTitle')}</CardTitle>
+              <CardDescription>{t('settings.dataDescription')}</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
-              <Label>数据库路径</Label>
+              <Label>{t('settings.dbPath')}</Label>
               {dataPath ? (
                 <code className="rounded-md bg-muted p-3 text-xs break-all">
                   {dataPath}
                 </code>
               ) : (
-                <PageLoading message="正在读取路径…" className="min-h-16" />
+                <PageLoading message={t('settings.loadingPath')} className="min-h-16" />
               )}
             </CardContent>
           </Card>

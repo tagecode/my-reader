@@ -3,6 +3,7 @@ import {
   ListIcon,
   Settings2Icon,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { formatPercent } from '@/lib/utils'
 import type { Book } from '@/types/electron'
@@ -26,19 +27,32 @@ export function ReaderToolbar({
   onToggleSettings,
   showToc,
 }: ReaderToolbarProps) {
+  const { t } = useTranslation()
+
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 border-b bg-background/95 px-3 backdrop-blur">
-      <Button variant="ghost" size="icon" onClick={onBack} aria-label="返回书库">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onBack}
+        aria-label={t('reader.backToLibrary')}
+      >
         <ArrowLeftIcon />
       </Button>
       <div className="min-w-0 flex-1">
         <h1 className="truncate text-sm font-medium">{book.title}</h1>
         <p className="truncate text-xs text-muted-foreground">
-          {subtitle ?? book.author ?? '未知作者'} · {formatPercent(progressPercent)}
+          {subtitle ?? book.author ?? t('common.unknownAuthor')} ·{' '}
+          {formatPercent(progressPercent)}
         </p>
       </div>
       {showToc && onToggleToc && (
-        <Button variant="ghost" size="icon" onClick={onToggleToc} aria-label="目录">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggleToc}
+          aria-label={t('reader.toc')}
+        >
           <ListIcon />
         </Button>
       )}
@@ -47,7 +61,7 @@ export function ReaderToolbar({
           variant="ghost"
           size="icon"
           onClick={onToggleSettings}
-          aria-label="阅读设置"
+          aria-label={t('reader.readerSettings')}
         >
           <Settings2Icon />
         </Button>

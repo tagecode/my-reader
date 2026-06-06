@@ -5,7 +5,9 @@ import {
   useRef,
   useState,
 } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
+import i18n from '@/lib/i18n'
 import { PageError, PageLoading } from '@/components/ui/page-state'
 import { useReadingProgress } from '@/hooks/useReadingProgress'
 import { TXT_ENCODINGS } from '@/lib/txt-encoding'
@@ -55,6 +57,7 @@ export function TxtReader({
   onProgress,
   onBack,
 }: TxtReaderProps) {
+  const { t } = useTranslation()
   const scrollRef = useRef<HTMLDivElement>(null)
   const segmentRefs = useRef<Map<number, HTMLSpanElement>>(new Map())
   const loadingLock = useRef(false)
@@ -111,7 +114,7 @@ export function TxtReader({
   const fetchChunk = useCallback(
     async (enc: string, byteOffset: number, size: number) => {
       if (!window.electronAPI) {
-        throw new Error('应用未就绪')
+        throw new Error(i18n.t('errors.appNotReady'))
       }
       return window.electronAPI.readTxtChunk(
         book.file_path,
@@ -303,7 +306,7 @@ export function TxtReader({
       try {
         await bootstrap(enc, 0, 0)
       } catch (err) {
-        setError(err instanceof Error ? err.message : '读取失败')
+        setError(err instanceof Error ? err.message : i18n.t('reader.txtReadFailed'))
       } finally {
         setLoading(false)
       }
@@ -328,7 +331,7 @@ export function TxtReader({
         setEncoding(enc)
         await bootstrap(enc, pos.firstByte ?? 0, pos.scrollTop ?? 0)
       } catch (err) {
-        setError(err instanceof Error ? err.message : '读取失败')
+        setError(err instanceof Error ? err.message : i18n.t('reader.txtReadFailed'))
       } finally {
         setLoading(false)
       }
@@ -473,13 +476,13 @@ export function TxtReader({
   }, [loading, segments.length])
 
   if (loading) {
-    return <PageLoading message="正在解码 TXT…" />
+    return <PageLoading message={t('reader.txtDecoding')} />
   }
 
   if (error) {
     return (
       <PageError
-        title="无法阅读此 TXT"
+        title={t('reader.txtCannotRead')}
         message={error}
         detail={book.file_path}
         onRetry={() => void reloadWithEncoding(encoding)}
@@ -491,7 +494,7 @@ export function TxtReader({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-2">
-        <span className="text-xs text-muted-foreground">编码</span>
+        <span className="text-xs text-muted-foreground">{t('common.encoding')}</span>
         {TXT_ENCODINGS.map((enc) => (
           <Button
             key={enc}
@@ -504,9 +507,9 @@ export function TxtReader({
         ))}
         {chunked && (
           <span className="text-xs text-muted-foreground">
-            大文件分块 · {formatBytes(totalBytes)}
-            {loadingEdge === 'next' && ' · 向下加载…'}
-            {loadingEdge === 'prev' && ' · 向上加载…'}
+            {t('reader.txtChunked', { size: formatBytes(totalBytes) })}
+            {loadingEdge === 'next' && t('reader.txtLoadingNext')}
+            {loadingEdge === 'prev' && t('reader.txtLoadingPrev')}
           </span>
         )}
       </div>
@@ -514,7 +517,7 @@ export function TxtReader({
         ref={scrollRef}
         className="min-h-0 flex-1 overflow-y-auto px-6 py-8 outline-none"
         tabIndex={0}
-        title="方向键 / 空格 / PageUp·PageDown 翻页，Home·End 首尾"
+        title={t('reader.txtKeysHint')}
         onScroll={handleScroll}
       >
         <pre
