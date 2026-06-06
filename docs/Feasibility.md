@@ -463,7 +463,6 @@ SELECT * FROM books_fts WHERE books_fts MATCH '段誉';
 | 挑战 | 解决方案 |
 |------|---------|
 | **多端同步** | 可选支持 WebDAV / 文件夹同步（仍是本地存储） |
-| **书源更新** | 不涉及 |
 | **OCR/AI 功能** | 优先本地模型，可选云端 |
 | **协作功能** | 本地不需要 |
 
@@ -592,7 +591,6 @@ SELECT * FROM books_fts WHERE books_fts MATCH '段誉';
 - [ ] WebDAV 同步（可选）
 - [ ] DJVU、CHM 支持
 - [ ] 格式转换（基于 Calibre）
-- [ ] OPDS 支持
 
 ### Phase 4: 持续完善
 
