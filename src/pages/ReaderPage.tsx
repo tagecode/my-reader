@@ -183,21 +183,8 @@ function ReaderContent({ bookId }: { bookId: string }) {
         onAddBookmark={() => void handleAddBookmark()}
         onToggleSettings={() => setShowSettings((v) => !v)}
       />
-      <div className="flex min-h-0 flex-1">
-        {showSidebar && (
-          <ReaderSidebar
-            toc={toc}
-            showToc={showToc}
-            activeTab={sidebarTab}
-            onTabChange={setSidebarTab}
-            bookmarks={bookmarks}
-            bookmarksLoading={bookmarksLoading}
-            onTocSelect={(href) => void handleTocSelect(href)}
-            onBookmarkSelect={(b) => void handleBookmarkSelect(b)}
-            onBookmarkRemove={(id) => void removeBookmark(id)}
-          />
-        )}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="relative min-h-0 flex-1">
+        <div className="absolute inset-0 flex min-h-0 flex-col overflow-hidden">
           {book.format === 'epub' && fileUrl && (
             <EpubReader
               ref={navRef}
@@ -231,15 +218,46 @@ function ReaderContent({ bookId }: { bookId: string }) {
             />
           )}
         </div>
-        {showSettings && (
-          <ReaderSettingsPanel
-            fontSize={fontSize}
-            readingWidth={readingWidth}
-            onFontSizeChange={(v) => patchSetting('fontSize', String(v))}
-            onReadingWidthChange={(v) =>
-              patchSetting('readingWidth', String(v))
-            }
+
+        {(showSidebar || showSettings) && (
+          <button
+            type="button"
+            className="absolute inset-0 z-10 bg-black/20"
+            aria-label={t('common.close')}
+            onClick={() => {
+              setShowSidebar(false)
+              setShowSettings(false)
+            }}
           />
+        )}
+
+        {showSidebar && (
+          <div className="absolute inset-y-0 left-0 z-20 flex shadow-lg">
+            <ReaderSidebar
+              toc={toc}
+              showToc={showToc}
+              activeTab={sidebarTab}
+              onTabChange={setSidebarTab}
+              bookmarks={bookmarks}
+              bookmarksLoading={bookmarksLoading}
+              onTocSelect={(href) => void handleTocSelect(href)}
+              onBookmarkSelect={(b) => void handleBookmarkSelect(b)}
+              onBookmarkRemove={(id) => void removeBookmark(id)}
+            />
+          </div>
+        )}
+
+        {showSettings && (
+          <div className="absolute inset-y-0 right-0 z-20 flex shadow-lg">
+            <ReaderSettingsPanel
+              fontSize={fontSize}
+              readingWidth={readingWidth}
+              onFontSizeChange={(v) => patchSetting('fontSize', String(v))}
+              onReadingWidthChange={(v) =>
+                patchSetting('readingWidth', String(v))
+              }
+            />
+          </div>
         )}
       </div>
       <footer className="h-1 shrink-0 bg-muted">

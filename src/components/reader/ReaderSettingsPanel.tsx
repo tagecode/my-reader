@@ -30,7 +30,7 @@ export function ReaderSettingsPanel({
   }
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col gap-4 border-l bg-card p-4">
+    <aside className="flex h-full w-64 flex-col gap-4 border-l bg-card p-4">
       <h2 className="text-sm font-semibold">{t('reader.settingsTitle')}</h2>
       <Separator />
       <div className="flex flex-col gap-2">

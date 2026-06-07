@@ -44,7 +44,7 @@ export function ReaderSidebar({
   const showTocSearch = flatTocCount >= TOC_SEARCH_THRESHOLD
 
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r bg-background">
+    <aside className="flex h-full w-56 flex-col border-r bg-background">
       <Tabs
         value={effectiveTab}
         onValueChange={(v) => onTabChange(v as ReaderSidebarTab)}
