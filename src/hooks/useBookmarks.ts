@@ -29,6 +29,7 @@ export function useBookmarks(bookId: string | null) {
   }, [bookId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- bookId 变化时拉取书签
     void refresh()
   }, [refresh])
 

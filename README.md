@@ -3,7 +3,7 @@
 [简体中文](README.md) | **[English](README.en.md)**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.0-green.svg)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](#支持平台)
 
 一款跨平台、**纯本地优先**的桌面电子书阅读器。支持 EPUB、TXT、PDF，书库与阅读进度全部保存在本机，无需账号、无需联网。
@@ -14,8 +14,8 @@
 
 ## 功能特性
 
-- **多格式阅读** — EPUB（目录跳转）、PDF（页码跳转）、TXT（分块加载）
-- **本地书库** — 导入、搜索、封面展示；横排（列表）/ 竖排（网格）两种布局，**设置中可切换，默认横排**
+- **多格式阅读** — EPUB（目录跳转、书签）、PDF（页码跳转）、TXT（分块加载）
+- **本地书库** — 导入、搜索、封面展示；最近阅读；筛选与排序；横排（列表）/ 竖排（网格）两种布局，**设置中可切换，默认横排**
 - **阅读进度** — 自动保存，关闭应用后再次打开可恢复
 - **阅读设置** — 日间/夜间主题、字号、阅读宽度、字体选择
 - **中文编码** — TXT 自动识别 UTF-8、GBK、Big5、GB18030 等常见编码
@@ -146,8 +146,8 @@ my-reader/
 3. 创建与版本号一致的 git tag 并推送：
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 推送 `v*` tag 后将触发 [Release workflow](.github/workflows/release.yml)，自动在 macOS / Windows / Linux 上构建并发布到 GitHub Releases。

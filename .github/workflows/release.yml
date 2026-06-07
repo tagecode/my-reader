@@ -124,7 +124,14 @@ jobs:
             artifacts/**/MyReader-v*.deb
           generate_release_notes: true
           body: |
-            首个 MVP 公开发布。完整变更见 [CHANGELOG.md](https://github.com/tagecode/my-reader/blob/main/CHANGELOG.md)。
+            Phase 2 功能发布。完整变更见 [CHANGELOG.md](https://github.com/tagecode/my-reader/blob/main/CHANGELOG.md#020---2026-06-07)。
+
+            ## 亮点
+
+            - 书签：阅读页添加 / 侧栏管理 / 一键跳转
+            - 书库：最近阅读、筛选与排序
+            - 大书 EPUB 加载与目录虚拟化优化
+            - PDF / TXT 按需读取，阅读页浮层布局，夜间 EPUB 可读性修复
 
             ## 安装说明
 

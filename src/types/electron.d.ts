@@ -1,11 +1,4 @@
 import type { ElectronAPI } from '../../electron/preload'
-import type {
-  LibraryFormatFilter,
-  LibrarySortField,
-  LibrarySortOrder,
-  LibraryStatusFilter,
-  ListBooksQuery,
-} from './library'
 
 export type {
   LibraryFormatFilter,

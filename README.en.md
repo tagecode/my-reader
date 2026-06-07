@@ -3,7 +3,7 @@
 **English** | [简体中文](README.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.0-green.svg)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](#supported-platforms)
 
 A cross-platform, **local-first** desktop e-book reader. Supports EPUB, TXT, and PDF. Your library and reading progress stay on your machine — no account, no cloud sync required.
@@ -14,8 +14,8 @@ A cross-platform, **local-first** desktop e-book reader. Supports EPUB, TXT, and
 
 ## Features
 
-- **Multi-format reading** — EPUB (table of contents), PDF (page jump), TXT (chunked loading)
-- **Local library** — Import, search, cover thumbnails; **list (horizontal) or grid (vertical) layout**, configurable in Settings (list is default)
+- **Multi-format reading** — EPUB (TOC, bookmarks), PDF (page jump), TXT (chunked loading)
+- **Local library** — Import, search, cover thumbnails; recent reads; filters and sorting; **list or grid layout**, configurable in Settings (list is default)
 - **Reading progress** — Auto-saved; resume where you left off after reopening the app
 - **Reader settings** — Day/night theme, font size, reading width, font family
 - **Chinese text encodings** — Auto-detect UTF-8, GBK, Big5, GB18030, and other common encodings for TXT
@@ -146,8 +146,8 @@ my-reader/
 3. Create and push a matching git tag:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 Pushing a `v*` tag triggers the [Release workflow](.github/workflows/release.yml), which builds for macOS, Windows, and Linux and publishes to GitHub Releases.

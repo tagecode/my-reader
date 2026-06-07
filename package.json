@@ -2,7 +2,7 @@
   "name": "my-reader",
   "productName": "摸鱼阅读器",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "一款跨平台、纯本地优先的桌面电子阅读器，目前支持 EPUB、PDF、TXT 三种核心格式",
   "author": "TageCode <tagecode@hotmail.com>",
   "license": "MIT",
