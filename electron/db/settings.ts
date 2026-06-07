@@ -6,6 +6,10 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   readingWidth: '720',
   locale: 'system',
   libraryView: 'list',
+  librarySort: 'recentImport',
+  librarySortOrder: 'desc',
+  libraryFormatFilter: 'all',
+  libraryStatusFilter: 'all',
 }
 
 export function getSetting(key: string): string | null {

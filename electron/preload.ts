@@ -5,8 +5,16 @@ const api = {
   getDataPath: () => ipcRenderer.invoke('app:getDataPath') as Promise<string>,
   setWindowTitle: (title: string) =>
     ipcRenderer.invoke('app:setWindowTitle', title),
-  listBooks: (search?: string) =>
-    ipcRenderer.invoke('books:list', search) as Promise<unknown[]>,
+  listBooks: (query?: unknown) =>
+    ipcRenderer.invoke('books:list', query) as Promise<unknown[]>,
+  listRecentBooks: (limit?: number) =>
+    ipcRenderer.invoke('books:listRecent', limit) as Promise<unknown[]>,
+  touchLastRead: (bookId: string) =>
+    ipcRenderer.invoke('books:touchLastRead', bookId) as Promise<boolean>,
+  clearRecentReading: (bookId: string) =>
+    ipcRenderer.invoke('books:clearRecentReading', bookId) as Promise<boolean>,
+  setBookFavorite: (bookId: string, favorite: boolean) =>
+    ipcRenderer.invoke('books:setFavorite', bookId, favorite) as Promise<unknown>,
   getBook: (id: string) => ipcRenderer.invoke('books:get', id),
   removeBook: (id: string) => ipcRenderer.invoke('books:remove', id),
   importDialog: () => ipcRenderer.invoke('books:importDialog'),

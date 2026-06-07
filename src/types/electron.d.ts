@@ -1,4 +1,19 @@
 import type { ElectronAPI } from '../../electron/preload'
+import type {
+  LibraryFormatFilter,
+  LibrarySortField,
+  LibrarySortOrder,
+  LibraryStatusFilter,
+  ListBooksQuery,
+} from './library'
+
+export type {
+  LibraryFormatFilter,
+  LibrarySortField,
+  LibrarySortOrder,
+  LibraryStatusFilter,
+  ListBooksQuery,
+} from './library'
 
 export interface Book {
   id: string
@@ -8,15 +23,18 @@ export interface Book {
   file_path: string
   file_size: number
   cover_path: string | null
+  is_favorite: number
   imported_at: number
   updated_at: number
   progress_percent?: number
+  last_read_at?: number | null
 }
 
 export interface ReadingProgress {
   book_id: string
   position: string
   progress_percent: number
+  last_read_at: number | null
   updated_at: number
 }
 

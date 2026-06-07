@@ -1,4 +1,4 @@
-import { BookOpenIcon, Trash2Icon } from 'lucide-react'
+import { BookOpenIcon, ListXIcon, StarIcon, Trash2Icon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BookCover } from '@/components/library/BookCover'
 import { Badge } from '@/components/ui/badge'
@@ -11,7 +11,12 @@ interface BookCardProps {
   book: Book
   view: 'grid' | 'list'
   onOpen: (book: Book) => void
-  onRemove: (book: Book) => void
+  onRemove?: (book: Book) => void
+  onToggleFavorite?: (book: Book) => void
+  /** 仅从最近阅读列表移除，不删除书库记录 */
+  onClearRecent?: (book: Book) => void
+  /** 最近阅读区：样式与操作与书库略有区分 */
+  section?: 'library' | 'recent'
 }
 
 interface BookCoverButtonProps {
@@ -72,16 +77,62 @@ function BookCoverButton({
   )
 }
 
-export function BookCard({ book, view, onOpen, onRemove }: BookCardProps) {
+export function BookCard({
+  book,
+  view,
+  onOpen,
+  onRemove,
+  onToggleFavorite,
+  onClearRecent,
+  section = 'library',
+}: BookCardProps) {
   const { t } = useTranslation()
   const progress = book.progress_percent ?? 0
   const openLabel = t('library.openBookLabel', { title: book.title })
   const author = book.author ?? t('common.unknownAuthor')
   const handleOpen = () => onOpen(book)
+  const isRecent = section === 'recent'
+  const readLabel = isRecent ? t('common.continueReading') : t('common.read')
+  const isFavorite = (book.is_favorite ?? 0) === 1
+  const favoriteLabel = isFavorite
+    ? t('library.unfavoriteLabel', { title: book.title })
+    : t('library.favoriteLabel', { title: book.title })
+
+  const favoriteButton = onToggleFavorite ? (
+    <Button
+      size="icon"
+      variant={isFavorite ? 'secondary' : 'outline'}
+      aria-label={favoriteLabel}
+      aria-pressed={isFavorite}
+      onClick={() => onToggleFavorite(book)}
+    >
+      <StarIcon className={isFavorite ? 'fill-current' : undefined} />
+    </Button>
+  ) : null
+
+  const clearRecentButton =
+    isRecent && onClearRecent ? (
+      <Button
+        size="icon"
+        variant="outline"
+        aria-label={t('library.clearRecentLabel', { title: book.title })}
+        title={t('library.clearRecentHint')}
+        onClick={() => onClearRecent(book)}
+      >
+        <ListXIcon />
+      </Button>
+    ) : null
 
   if (view === 'list') {
     return (
-      <div className="flex items-center gap-4 rounded-lg border bg-card p-3">
+      <div
+        className={cn(
+          'flex items-center gap-4 rounded-lg border p-3',
+          isRecent
+            ? 'border-primary/25 bg-primary/5 dark:bg-primary/10'
+            : 'bg-card',
+        )}
+      >
         <BookCoverButton
           book={book}
           openLabel={openLabel}
@@ -101,18 +152,27 @@ export function BookCard({ book, view, onOpen, onRemove }: BookCardProps) {
         <div className="flex shrink-0 gap-2">
           <Button size="sm" onClick={() => onOpen(book)}>
             <BookOpenIcon />
-            {t('common.read')}
+            {readLabel}
           </Button>
-          <Button size="sm" variant="outline" onClick={() => onRemove(book)}>
-            <Trash2Icon />
-          </Button>
+          {favoriteButton}
+          {clearRecentButton}
+          {onRemove && !isRecent && (
+            <Button size="sm" variant="outline" onClick={() => onRemove(book)}>
+              <Trash2Icon />
+            </Button>
+          )}
         </div>
       </div>
     )
   }
 
   return (
-    <Card className="overflow-hidden py-0">
+    <Card
+      className={cn(
+        'overflow-hidden py-0',
+        isRecent && 'border-primary/25 bg-primary/5 dark:bg-primary/10',
+      )}
+    >
       <BookCoverButton
         book={book}
         openLabel={openLabel}
@@ -132,11 +192,15 @@ export function BookCard({ book, view, onOpen, onRemove }: BookCardProps) {
       <CardFooter className="gap-2 pb-4">
         <Button className="flex-1" size="sm" onClick={() => onOpen(book)}>
           <BookOpenIcon />
-          {t('common.read')}
+          {readLabel}
         </Button>
-        <Button size="icon" variant="outline" onClick={() => onRemove(book)}>
-          <Trash2Icon />
-        </Button>
+        {favoriteButton}
+        {clearRecentButton}
+        {onRemove && !isRecent && (
+          <Button size="icon" variant="outline" onClick={() => onRemove(book)}>
+            <Trash2Icon />
+          </Button>
+        )}
       </CardFooter>
     </Card>
   )

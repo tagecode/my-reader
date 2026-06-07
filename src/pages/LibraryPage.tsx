@@ -8,6 +8,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BookCard } from '@/components/library/BookCard'
 import { EmptyLibrary } from '@/components/library/EmptyLibrary'
+import { LibraryFilters } from '@/components/library/LibraryFilters'
+import { RecentReadingSection } from '@/components/library/RecentReadingSection'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -27,6 +29,7 @@ import {
 } from '@/lib/importBooks'
 import { generateMissingPdfCovers } from '@/lib/generatePdfCovers'
 import { useAppStore } from '@/stores/app-store'
+import { isDefaultLibraryFilters } from '@/types/library'
 import type { Book } from '@/types/electron'
 import type { StatusVariant } from '@/components/ui/status-message'
 
@@ -38,11 +41,9 @@ type ImportFeedback = {
 }
 
 function CoverSyncBanner({
-  loadBooks,
-  searchQuery,
+  refreshLibrary,
 }: {
-  loadBooks: (search?: string) => Promise<void>
-  searchQuery: string
+  refreshLibrary: () => Promise<void>
 }) {
   const [syncing, setSyncing] = useState(true)
 
@@ -51,7 +52,7 @@ function CoverSyncBanner({
     void generateMissingPdfCovers()
       .then((n) => {
         if (cancelled || n === 0) return
-        void loadBooks(searchQuery || undefined)
+        void refreshLibrary()
       })
       .finally(() => {
         if (!cancelled) setSyncing(false)
@@ -59,7 +60,7 @@ function CoverSyncBanner({
     return () => {
       cancelled = true
     }
-  }, [loadBooks, searchQuery])
+  }, [refreshLibrary])
 
   const { t } = useTranslation()
 
@@ -75,17 +76,23 @@ function CoverSyncBanner({
 export function LibraryPage() {
   const { t } = useTranslation()
   const books = useAppStore((s) => s.books)
+  const recentBooks = useAppStore((s) => s.recentBooks)
   const loading = useAppStore((s) => s.loading)
   const importing = useAppStore((s) => s.importing)
   const error = useAppStore((s) => s.error)
   const searchQuery = useAppStore((s) => s.searchQuery)
   const libraryView = useAppStore((s) => s.libraryView)
+  const libraryFormatFilter = useAppStore((s) => s.libraryFormatFilter)
+  const libraryStatusFilter = useAppStore((s) => s.libraryStatusFilter)
   const setSearchQuery = useAppStore((s) => s.setSearchQuery)
   const setLibraryView = useAppStore((s) => s.setLibraryView)
+  const refreshLibrary = useAppStore((s) => s.refreshLibrary)
   const loadBooks = useAppStore((s) => s.loadBooks)
   const setImporting = useAppStore((s) => s.setImporting)
   const setPage = useAppStore((s) => s.setPage)
   const setCurrentBookId = useAppStore((s) => s.setCurrentBookId)
+  const toggleFavorite = useAppStore((s) => s.toggleFavorite)
+  const clearRecentReading = useAppStore((s) => s.clearRecentReading)
 
   const [dragActive, setDragActive] = useState(false)
   const [removeTarget, setRemoveTarget] = useState<Book | null>(null)
@@ -93,13 +100,21 @@ export function LibraryPage() {
     null,
   )
 
+  const showRecentSection = isDefaultLibraryFilters({
+    searchQuery,
+    libraryFormatFilter,
+    libraryStatusFilter,
+  })
+  const showLibrarySectionHeader =
+    showRecentSection && recentBooks.length > 0 && books.length > 0
+
   useEffect(() => {
-    void loadBooks()
-  }, [loadBooks])
+    void refreshLibrary()
+  }, [refreshLibrary])
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      void loadBooks(searchQuery || undefined)
+      void loadBooks()
     }, 300)
     return () => clearTimeout(timer)
   }, [searchQuery, loadBooks])
@@ -111,12 +126,12 @@ export function LibraryPage() {
       try {
         const feedback = await runner()
         if (feedback) setImportFeedback(feedback)
-        await loadBooks(searchQuery || undefined)
+        await refreshLibrary()
       } finally {
         setImporting(false)
       }
     },
-    [loadBooks, searchQuery, setImporting],
+    [refreshLibrary, setImporting],
   )
 
   const handleImport = useCallback(async () => {
@@ -151,17 +166,37 @@ export function LibraryPage() {
     setPage('reader')
   }
 
+  const handleToggleFavorite = (book: Book) => {
+    void toggleFavorite(book.id, (book.is_favorite ?? 0) !== 1)
+  }
+
+  const handleClearRecent = (book: Book) => {
+    void clearRecentReading(book.id)
+  }
+
   const handleRemoveConfirm = async () => {
     if (!removeTarget || !window.electronAPI) return
     await window.electronAPI.removeBook(removeTarget.id)
     setRemoveTarget(null)
-    await loadBooks(searchQuery || undefined)
+    await refreshLibrary()
   }
 
+  const hasActiveFilters =
+    libraryFormatFilter !== 'all' || libraryStatusFilter !== 'all'
   const showEmptyLibrary =
-    !loading && !importing && books.length === 0 && !searchQuery.trim()
+    !loading &&
+    !importing &&
+    books.length === 0 &&
+    !searchQuery.trim() &&
+    !hasActiveFilters
   const showEmptySearch =
     !loading && !importing && books.length === 0 && !!searchQuery.trim()
+  const showEmptyFilter =
+    !loading &&
+    !importing &&
+    books.length === 0 &&
+    !searchQuery.trim() &&
+    hasActiveFilters
 
   return (
     <div
@@ -212,6 +247,8 @@ export function LibraryPage() {
         </Button>
       </div>
 
+      <LibraryFilters />
+
       {importing && (
         <StatusMessage variant="info" title={t('library.importingTitle')}>
           {t('library.importingMessage')}
@@ -247,7 +284,7 @@ export function LibraryPage() {
         </StatusMessage>
       )}
 
-      {loading && books.length === 0 ? (
+      {loading && books.length === 0 && recentBooks.length === 0 ? (
         <PageLoading message={t('library.loading')} />
       ) : showEmptyLibrary ? (
         <EmptyLibrary
@@ -255,33 +292,60 @@ export function LibraryPage() {
           dragActive={dragActive}
           disabled={importing}
         />
-      ) : showEmptySearch ? (
-        <EmptySearch query={searchQuery.trim()} />
       ) : (
-        <div
-          className={
-            libraryView === 'grid'
-              ? 'grid flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4 overflow-y-auto'
-              : 'flex flex-1 flex-col gap-3 overflow-y-auto'
-          }
-        >
-          {books.map((book) => (
-            <BookCard
-              key={book.id}
-              book={book}
+        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto">
+          {showRecentSection && recentBooks.length > 0 && (
+            <RecentReadingSection
+              books={recentBooks}
               view={libraryView}
               onOpen={handleOpen}
-              onRemove={setRemoveTarget}
+              onToggleFavorite={handleToggleFavorite}
+              onClearRecent={handleClearRecent}
             />
-          ))}
+          )}
+
+          {showEmptySearch ? (
+            <EmptySearch query={searchQuery.trim()} />
+          ) : showEmptyFilter ? (
+            <StatusMessage variant="info" title={t('library.filterEmptyTitle')}>
+              {t('library.filterEmptyDescription')}
+            </StatusMessage>
+          ) : books.length > 0 ? (
+            <section aria-labelledby="library-all-heading" className="flex flex-col gap-3">
+              {showLibrarySectionHeader && (
+                <header className="flex items-baseline justify-between gap-2 border-b pb-2">
+                  <h2 id="library-all-heading" className="text-sm font-semibold">
+                    {t('library.allBooksTitle')}
+                  </h2>
+                  <span className="text-xs text-muted-foreground">
+                    {t('library.bookCount', { count: books.length })}
+                  </span>
+                </header>
+              )}
+              <div
+                className={
+                  libraryView === 'grid'
+                    ? 'grid auto-rows-min grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4'
+                    : 'flex flex-col gap-3'
+                }
+              >
+                {books.map((book) => (
+                  <BookCard
+                    key={book.id}
+                    book={book}
+                    view={libraryView}
+                    onOpen={handleOpen}
+                    onRemove={setRemoveTarget}
+                    onToggleFavorite={handleToggleFavorite}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
       )}
 
-      <CoverSyncBanner
-        key={searchQuery}
-        loadBooks={loadBooks}
-        searchQuery={searchQuery}
-      />
+      <CoverSyncBanner refreshLibrary={refreshLibrary} />
 
       <Dialog open={!!removeTarget} onOpenChange={() => setRemoveTarget(null)}>
         <DialogContent>

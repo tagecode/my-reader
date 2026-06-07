@@ -59,6 +59,7 @@ function ReaderContent({ bookId }: { bookId: string }) {
 
         setBook(b)
         setProgressPercent(b.progress_percent ?? 0)
+        void window.electronAPI.touchLastRead(bookId)
 
         if (b.format === 'epub') {
           const url = await window.electronAPI.toFileUrl(b.file_path)

@@ -14,8 +14,8 @@ import { fileURLToPath } from 'node:url'
 import iconv from 'iconv-lite'
 import JSZip from 'jszip'
 
-import { initDatabase, closeDatabase, getDbPath } from '../electron/db/index.ts'
-import { listBooks, getBookById, detectFormat } from '../electron/db/books.ts'
+import { initDatabase, closeDatabase, getDbPath, getDatabase } from '../electron/db/index.ts'
+import { listBooks, listRecentBooks, getBookById, detectFormat } from '../electron/db/books.ts'
 import { getProgress, saveProgress } from '../electron/db/progress.ts'
 import {
   getAllSettings,
@@ -25,6 +25,7 @@ import {
 import { importBooksFromPaths } from '../electron/services/import.ts'
 import { detectTxtEncoding, getTxtFileInfo, readTxtChunk, readTxtFile } from '../electron/services/txt.ts'
 import { extractMetadata } from '../electron/services/metadata/index.ts'
+import Database from 'better-sqlite3'
 
 function toMyReaderUrl(filePath: string): string {
   return `myreader://open?path=${encodeURIComponent(filePath)}`
@@ -383,6 +384,70 @@ async function testFormatDetection() {
   assert(detectFormat('/a/book.doc') === null, '应拒绝不支持格式')
 }
 
+async function testDbV1Migration(tmpData: string) {
+  closeDatabase()
+  const v1Dir = path.join(tmpData, 'v1-sim')
+  await fs.mkdir(v1Dir, { recursive: true })
+  const dbPath = path.join(v1Dir, 'my-reader.db')
+
+  const legacy = new Database(dbPath)
+  legacy.exec(`CREATE TABLE schema_version (version INTEGER PRIMARY KEY NOT NULL)`)
+  legacy.prepare('INSERT INTO schema_version (version) VALUES (1)').run()
+  legacy.exec(`
+    CREATE TABLE books (
+      id TEXT PRIMARY KEY NOT NULL,
+      title TEXT NOT NULL,
+      author TEXT,
+      format TEXT NOT NULL CHECK (format IN ('epub', 'txt', 'pdf')),
+      file_path TEXT NOT NULL UNIQUE,
+      file_size INTEGER NOT NULL DEFAULT 0,
+      cover_path TEXT,
+      imported_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`)
+  legacy.exec(`
+    CREATE TABLE reading_progress (
+      book_id TEXT PRIMARY KEY NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+      position TEXT NOT NULL DEFAULT '{}',
+      progress_percent REAL NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL
+    )`)
+  legacy.exec(`
+    CREATE TABLE settings (
+      key TEXT PRIMARY KEY NOT NULL,
+      value TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`)
+  legacy.close()
+
+  const previous = process.env.MYREADER_TEST_DATA
+  process.env.MYREADER_TEST_DATA = v1Dir
+  initDatabase()
+
+  const progressCols = getDatabase()
+    .prepare('PRAGMA table_info(reading_progress)')
+    .all() as { name: string }[]
+  assert(
+    progressCols.some((col) => col.name === 'last_read_at'),
+    'v1 升级后缺少 last_read_at',
+  )
+
+  const bookCols = getDatabase()
+    .prepare('PRAGMA table_info(books)')
+    .all() as { name: string }[]
+  assert(
+    bookCols.some((col) => col.name === 'is_favorite'),
+    'v1 升级后缺少 is_favorite',
+  )
+
+  listBooks({ sort: 'recentRead' })
+  assert(listRecentBooks(4).length === 0, '空库 recent 应为 0')
+
+  closeDatabase()
+  process.env.MYREADER_TEST_DATA = previous
+  initDatabase()
+}
+
 export async function runMvpSmokeTests(tmpData: string): Promise<void> {
   process.env.MYREADER_TEST_DATA = tmpData
 
@@ -443,6 +508,9 @@ export async function runMvpSmokeTests(tmpData: string): Promise<void> {
 
       await testFormatDetection()
       pass('FMT', '格式识别', 'epub/txt/pdf 扩展名白名单')
+
+      await testDbV1Migration(tmpData)
+      pass('DB-002', 'v1 数据库升级', 'last_read_at / is_favorite 迁移与 recentRead 查询')
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       fail('RUN', '未捕获断言', message)

@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import fs from 'node:fs'
 import path from 'node:path'
 import { getDbPath } from '../app-paths'
+import { applyPendingMigrations } from './migrate'
 import { DB_VERSION, MIGRATIONS } from './schema'
 
 let db: Database.Database | null = null
@@ -22,13 +23,7 @@ export function initDatabase(): Database.Database {
     db.exec(sql)
   }
 
-  const row = db
-    .prepare('SELECT version FROM schema_version LIMIT 1')
-    .get() as { version: number } | undefined
-
-  if (!row) {
-    db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(DB_VERSION)
-  }
+  applyPendingMigrations(db, DB_VERSION)
 
   return db
 }

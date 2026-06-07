@@ -3,12 +3,14 @@ import fs from 'node:fs/promises'
 import {
   getBookById,
   listBooks,
+  listRecentBooks,
   removeBook,
+  setBookFavorite,
   updateBookCoverPath,
 } from '../db/books'
 import { readCoverBase64, removeCover, saveCover } from '../services/covers'
 import { getDbPath, initDatabase } from '../db/index'
-import { getProgress, saveProgress } from '../db/progress'
+import { getProgress, saveProgress, touchLastRead, clearRecentReading } from '../db/progress'
 import {
   getAllSettings,
   resetSettings,
@@ -40,9 +42,27 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  ipcMain.handle('books:list', (_event, search?: string) => listBooks(search))
+  ipcMain.handle('books:list', (_event, query) => listBooks(query))
+
+  ipcMain.handle('books:listRecent', (_event, limit?: number) =>
+    listRecentBooks(typeof limit === 'number' ? limit : 8),
+  )
 
   ipcMain.handle('books:get', (_event, id: string) => getBookById(id))
+
+  ipcMain.handle('books:touchLastRead', (_event, id: string) => {
+    touchLastRead(id)
+    return true
+  })
+
+  ipcMain.handle('books:clearRecentReading', (_event, id: string) => {
+    clearRecentReading(id)
+    return true
+  })
+
+  ipcMain.handle('books:setFavorite', (_event, id: string, favorite: boolean) =>
+    setBookFavorite(id, favorite),
+  )
 
   ipcMain.handle('books:remove', async (_event, id: string) => {
     const book = getBookById(id)

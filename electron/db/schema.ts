@@ -1,4 +1,4 @@
-export const DB_VERSION = 1
+export const DB_VERSION = 2
 
 export const MIGRATIONS = [
   `CREATE TABLE IF NOT EXISTS schema_version (
@@ -12,6 +12,7 @@ export const MIGRATIONS = [
     file_path TEXT NOT NULL UNIQUE,
     file_size INTEGER NOT NULL DEFAULT 0,
     cover_path TEXT,
+    is_favorite INTEGER NOT NULL DEFAULT 0,
     imported_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
   )`,
@@ -19,6 +20,7 @@ export const MIGRATIONS = [
     book_id TEXT PRIMARY KEY NOT NULL REFERENCES books(id) ON DELETE CASCADE,
     position TEXT NOT NULL DEFAULT '{}',
     progress_percent REAL NOT NULL DEFAULT 0,
+    last_read_at INTEGER,
     updated_at INTEGER NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS settings (
