@@ -105,6 +105,11 @@ export const en = {
     readingWidth: 'Reading width',
     settingsHint: 'Changes apply immediately and are saved as defaults.',
     epubLoading: 'Loading EPUB…',
+    epubLoadingLarge:
+      'Large file or many chapters — first open may take a while',
+    epubLoadingSlow: 'Still parsing, please wait…',
+    tocSearchPlaceholder: 'Search {{count}} chapters…',
+    tocSearchEmpty: 'No matching entries',
     epubParseFailed: 'Failed to parse EPUB; the file may be corrupt or unsupported',
     epubKeysHint: 'Arrow keys / Space to turn pages',
     txtDecoding: 'Decoding TXT…',

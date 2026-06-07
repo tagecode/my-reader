@@ -267,19 +267,21 @@ export const PdfReader = forwardRef<ReaderNavigationHandle, PdfReaderProps>(
       setDocReady(false)
       setError(null)
       try {
-        if (!window.electronAPI?.readPdfBuffer) {
+        if (!window.electronAPI?.toFileUrl) {
           throw new Error(i18n.t('reader.pdfReadFailed'))
         }
 
-        const bytes = await window.electronAPI.readPdfBuffer(book.file_path)
+        const fileUrl = await window.electronAPI.toFileUrl(book.file_path)
         if (cancelled) return
-        if (!bytes?.length) {
-          throw new Error(i18n.t('reader.pdfEmpty'))
+        if (!fileUrl) {
+          throw new Error(i18n.t('reader.pdfReadFailed'))
         }
 
         await ensurePdfjsChineseFonts()
 
-        const task = pdfjs.getDocument(getPdfjsDocumentOptions(bytes))
+        const task = pdfjs.getDocument(
+          getPdfjsDocumentOptions({ kind: 'url', url: fileUrl }),
+        )
         const pdf = await task.promise
         if (cancelled) return
 

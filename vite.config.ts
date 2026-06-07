@@ -28,6 +28,7 @@ export default defineConfig({
                 'better-sqlite3',
                 'electron',
                 'jszip',
+                'yauzl',
                 'fast-xml-parser',
                 'iconv-lite',
                 'jschardet',

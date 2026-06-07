@@ -16,6 +16,12 @@ import type {
   TocItem,
 } from '@/types/reader-navigation'
 
+/** 大于此体积（字节）的 EPUB 显示「大文件解析」提示 */
+const EPUB_LARGE_FILE_BYTES = 4 * 1024 * 1024
+
+/** 加载超过此时间后显示「请耐心等待」提示 */
+const EPUB_SLOW_HINT_MS = 4000
+
 interface FoliateViewElement extends HTMLElement {
   open: (url: string) => Promise<void>
   init: (opts: { lastLocation?: unknown; showTextStart?: boolean }) => Promise<void>
@@ -61,6 +67,7 @@ export const EpubReader = forwardRef<ReaderNavigationHandle, EpubReaderProps>(
     }>({})
     const [viewReady, setViewReady] = useState(false)
     const [loading, setLoading] = useState(true)
+    const [loadingHint, setLoadingHint] = useState<string | undefined>()
 
     const onProgressRef = useRef(onProgress)
     const onLocationLabelRef = useRef(onLocationLabel)
@@ -75,6 +82,27 @@ export const EpubReader = forwardRef<ReaderNavigationHandle, EpubReaderProps>(
     const { loadProgress, saveProgress } = useReadingProgress(book.id)
     const saveProgressRef = useRef(saveProgress)
     saveProgressRef.current = saveProgress
+
+    const isLargeEpub = book.file_size >= EPUB_LARGE_FILE_BYTES
+
+    useEffect(() => {
+      if (!loading) {
+        setLoadingHint(undefined)
+        return
+      }
+
+      if (isLargeEpub) {
+        setLoadingHint(t('reader.epubLoadingLarge'))
+      } else {
+        setLoadingHint(undefined)
+      }
+
+      const timer = window.setTimeout(() => {
+        setLoadingHint(t('reader.epubLoadingSlow'))
+      }, EPUB_SLOW_HINT_MS)
+
+      return () => window.clearTimeout(timer)
+    }, [isLargeEpub, loading, t])
 
     useImperativeHandle(
       ref,
@@ -252,7 +280,7 @@ export const EpubReader = forwardRef<ReaderNavigationHandle, EpubReaderProps>(
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-background">
         {loading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-background">
-            <PageLoading message={t('reader.epubLoading')} />
+            <PageLoading message={t('reader.epubLoading')} hint={loadingHint} />
           </div>
         )}
         <div

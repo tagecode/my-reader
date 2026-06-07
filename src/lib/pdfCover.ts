@@ -9,11 +9,11 @@ const MAX_COVER_WIDTH = 480
 
 /** 将 PDF 第一页渲染为 JPEG，用作书库封面缩略图 */
 export async function renderPdfCoverJpeg(
-  bytes: Uint8Array,
+  source: { kind: 'data'; data: Uint8Array } | { kind: 'url'; url: string },
 ): Promise<Uint8Array | null> {
   await ensurePdfjsChineseFonts()
 
-  const task = pdfjs.getDocument(getPdfjsDocumentOptions(bytes))
+  const task = pdfjs.getDocument(getPdfjsDocumentOptions(source))
   const doc = await task.promise
 
   try {

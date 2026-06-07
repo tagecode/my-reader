@@ -14,8 +14,9 @@ export async function generatePdfCoversForBooks(
     if (!book || book.format !== 'pdf' || book.cover_path) continue
 
     try {
-      const bytes = await api.readPdfBuffer(book.file_path)
-      const jpeg = await renderPdfCoverJpeg(bytes)
+      const fileUrl = await api.toFileUrl(book.file_path)
+      if (!fileUrl) continue
+      const jpeg = await renderPdfCoverJpeg({ kind: 'url', url: fileUrl })
       if (!jpeg?.length) continue
       const ok = await api.saveCover(id, jpeg)
       if (ok) saved += 1

@@ -238,9 +238,13 @@ async function testAcc006ReadingLayout() {
 
 async function testAcc007EpubToc() {
   const epubSrc = await readSource('src/components/reader/EpubReader.tsx')
-  assert(epubSrc.includes('TocTree'), 'EpubReader 缺少目录树')
-  assert(epubSrc.includes('goToHref'), 'EpubReader 缺少目录跳转')
+  const sidebarSrc = await readSource('src/components/reader/ReaderSidebar.tsx')
+  const tocSrc = await readSource('src/components/reader/TocTree.tsx')
+  const readerPageSrc = await readSource('src/pages/ReaderPage.tsx')
+  assert(tocSrc.includes('TocTree'), 'TocTree 组件缺失')
+  assert(sidebarSrc.includes('TocTree'), 'ReaderSidebar 缺少目录树')
   assert(epubSrc.includes('view.book?.toc'), 'EpubReader 未读取 foliate toc')
+  assert(readerPageSrc.includes('handleTocSelect'), 'ReaderPage 缺少目录跳转')
 }
 
 async function testAcc008PdfPages(fixtures: Awaited<ReturnType<typeof writeFixtures>>) {

@@ -128,8 +128,16 @@ export function registerIpcHandlers(): void {
   )
 
   ipcMain.handle('txt:detectEncoding', async (_event, filePath: string) => {
-    const buf = await fs.readFile(filePath)
-    return detectTxtEncoding(buf)
+    const handle = await fs.open(filePath, 'r')
+    try {
+      const stat = await handle.stat()
+      const size = Math.min(stat.size, 64 * 1024)
+      const buf = Buffer.alloc(size)
+      await handle.read(buf, 0, size, 0)
+      return detectTxtEncoding(buf)
+    } finally {
+      await handle.close()
+    }
   })
 
   ipcMain.handle('txt:getInfo', (_event, filePath: string) =>

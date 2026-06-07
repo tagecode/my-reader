@@ -5,11 +5,13 @@ import { cn } from '@/lib/utils'
 
 interface PageLoadingProps {
   message?: string
+  hint?: string
   className?: string
 }
 
 export function PageLoading({
   message,
+  hint,
   className,
 }: PageLoadingProps) {
   const { t } = useTranslation()
@@ -21,7 +23,10 @@ export function PageLoading({
       )}
     >
       <Loader2Icon className="size-8 animate-spin" aria-hidden />
-      <p className="text-sm">{message ?? t('common.loading')}</p>
+      <div className="flex max-w-sm flex-col items-center gap-1 text-center">
+        <p className="text-sm">{message ?? t('common.loading')}</p>
+        {hint && <p className="text-xs text-muted-foreground/80">{hint}</p>}
+      </div>
     </div>
   )
 }

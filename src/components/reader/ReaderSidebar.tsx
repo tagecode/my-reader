@@ -1,9 +1,12 @@
-import { BookmarkIcon, Trash2Icon } from 'lucide-react'
+import { BookmarkIcon, SearchIcon, Trash2Icon } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TocTree } from '@/components/reader/TocTree'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { parseBookmarkPosition } from '@/hooks/useBookmarks'
+import { flattenToc, TOC_SEARCH_THRESHOLD } from '@/lib/toc-utils'
 import { formatPercent } from '@/lib/utils'
 import type { Bookmark } from '@/types/electron'
 import type { TocItem } from '@/types/reader-navigation'
@@ -34,8 +37,11 @@ export function ReaderSidebar({
   onBookmarkRemove,
 }: ReaderSidebarProps) {
   const { t } = useTranslation()
+  const [tocQuery, setTocQuery] = useState('')
 
   const effectiveTab = showToc ? activeTab : 'bookmarks'
+  const flatTocCount = useMemo(() => flattenToc(toc).length, [toc])
+  const showTocSearch = flatTocCount >= TOC_SEARCH_THRESHOLD
 
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r bg-background">
@@ -58,15 +64,34 @@ export function ReaderSidebar({
         {showToc && (
           <TabsContent
             value="toc"
-            className="mt-0 min-h-0 flex-1 overflow-y-auto p-2"
+            className="mt-0 flex min-h-0 flex-1 flex-col gap-2 p-2"
           >
-            {toc.length > 0 ? (
-              <TocTree items={toc} onSelect={onTocSelect} />
-            ) : (
-              <p className="px-2 py-4 text-center text-sm text-muted-foreground">
-                {t('reader.tocEmpty')}
-              </p>
+            {showTocSearch && (
+              <div className="relative shrink-0">
+                <SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="h-8 pl-7 text-xs"
+                  placeholder={t('reader.tocSearchPlaceholder', {
+                    count: flatTocCount,
+                  })}
+                  value={tocQuery}
+                  onChange={(e) => setTocQuery(e.target.value)}
+                />
+              </div>
             )}
+            <div className="min-h-0 flex-1">
+              {toc.length > 0 ? (
+                <TocTree
+                  items={toc}
+                  onSelect={onTocSelect}
+                  searchQuery={tocQuery}
+                />
+              ) : (
+                <p className="px-2 py-4 text-center text-sm text-muted-foreground">
+                  {t('reader.tocEmpty')}
+                </p>
+              )}
+            </div>
           </TabsContent>
         )}
 
