@@ -30,6 +30,16 @@ const api = {
     position: Record<string, unknown>,
     progressPercent: number,
   ) => ipcRenderer.invoke('progress:save', bookId, position, progressPercent),
+  listBookmarks: (bookId: string) =>
+    ipcRenderer.invoke('bookmarks:list', bookId) as Promise<unknown[]>,
+  createBookmark: (
+    bookId: string,
+    label: string,
+    position: Record<string, unknown>,
+    progressPercent?: number,
+  ) => ipcRenderer.invoke('bookmarks:create', bookId, label, position, progressPercent),
+  removeBookmark: (id: string) =>
+    ipcRenderer.invoke('bookmarks:remove', id) as Promise<boolean>,
   getSettings: () => ipcRenderer.invoke('settings:getAll'),
   setSetting: (key: string, value: string) =>
     ipcRenderer.invoke('settings:set', key, value),

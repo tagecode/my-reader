@@ -8,6 +8,11 @@ import {
   setBookFavorite,
   updateBookCoverPath,
 } from '../db/books'
+import {
+  createBookmark,
+  listBookmarks,
+  removeBookmark,
+} from '../db/bookmarks'
 import { readCoverBase64, removeCover, saveCover } from '../services/covers'
 import { getDbPath, initDatabase } from '../db/index'
 import { getProgress, saveProgress, touchLastRead, clearRecentReading } from '../db/progress'
@@ -171,4 +176,30 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle('settings:reset', () => resetSettings())
+
+  ipcMain.handle('bookmarks:list', (_event, bookId: string) =>
+    listBookmarks(bookId),
+  )
+
+  ipcMain.handle(
+    'bookmarks:create',
+    (
+      _event,
+      bookId: string,
+      label: string,
+      position: Record<string, unknown>,
+      progressPercent?: number,
+    ) =>
+      createBookmark({
+        book_id: bookId,
+        label,
+        position,
+        progress_percent: progressPercent,
+      }),
+  )
+
+  ipcMain.handle('bookmarks:remove', (_event, id: string) => {
+    removeBookmark(id)
+    return true
+  })
 }

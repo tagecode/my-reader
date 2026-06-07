@@ -1,11 +1,12 @@
 import {
   ArrowLeftIcon,
+  BookmarkPlusIcon,
   ListIcon,
   Settings2Icon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import { formatPercent } from '@/lib/utils'
+import { cn, formatPercent } from '@/lib/utils'
 import type { Book } from '@/types/electron'
 
 interface ReaderToolbarProps {
@@ -13,9 +14,10 @@ interface ReaderToolbarProps {
   subtitle?: string
   progressPercent: number
   onBack: () => void
-  onToggleToc?: () => void
+  onToggleSidebar?: () => void
+  sidebarOpen?: boolean
+  onAddBookmark?: () => void
   onToggleSettings?: () => void
-  showToc?: boolean
 }
 
 export function ReaderToolbar({
@@ -23,9 +25,10 @@ export function ReaderToolbar({
   subtitle,
   progressPercent,
   onBack,
-  onToggleToc,
+  onToggleSidebar,
+  sidebarOpen,
+  onAddBookmark,
   onToggleSettings,
-  showToc,
 }: ReaderToolbarProps) {
   const { t } = useTranslation()
 
@@ -46,12 +49,23 @@ export function ReaderToolbar({
           {formatPercent(progressPercent)}
         </p>
       </div>
-      {showToc && onToggleToc && (
+      {onAddBookmark && (
         <Button
           variant="ghost"
           size="icon"
-          onClick={onToggleToc}
-          aria-label={t('reader.toc')}
+          onClick={onAddBookmark}
+          aria-label={t('reader.addBookmark')}
+        >
+          <BookmarkPlusIcon />
+        </Button>
+      )}
+      {onToggleSidebar && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggleSidebar}
+          aria-label={t('reader.sidebar')}
+          className={cn(sidebarOpen && 'bg-accent')}
         >
           <ListIcon />
         </Button>

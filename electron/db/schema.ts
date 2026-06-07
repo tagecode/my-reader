@@ -1,4 +1,4 @@
-export const DB_VERSION = 2
+export const DB_VERSION = 3
 
 export const MIGRATIONS = [
   `CREATE TABLE IF NOT EXISTS schema_version (
@@ -28,6 +28,16 @@ export const MIGRATIONS = [
     value TEXT NOT NULL,
     updated_at INTEGER NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS bookmarks (
+    id TEXT PRIMARY KEY NOT NULL,
+    book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    label TEXT NOT NULL,
+    position TEXT NOT NULL DEFAULT '{}',
+    progress_percent REAL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`,
   `CREATE INDEX IF NOT EXISTS idx_books_title ON books(title)`,
   `CREATE INDEX IF NOT EXISTS idx_books_author ON books(author)`,
+  `CREATE INDEX IF NOT EXISTS idx_bookmarks_book_created ON bookmarks(book_id, created_at DESC)`,
 ]

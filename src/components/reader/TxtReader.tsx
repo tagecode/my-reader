@@ -1,6 +1,8 @@
 import {
+  forwardRef,
   useCallback,
   useEffect,
+  useImperativeHandle,
   useLayoutEffect,
   useRef,
   useState,
@@ -12,6 +14,7 @@ import { PageError, PageLoading } from '@/components/ui/page-state'
 import { useReadingProgress } from '@/hooks/useReadingProgress'
 import { TXT_ENCODINGS } from '@/lib/txt-encoding'
 import type { Book } from '@/types/electron'
+import type { BookmarkPosition, ReaderNavigationHandle } from '@/types/reader-navigation'
 
 interface TxtReaderProps {
   book: Book
@@ -50,13 +53,17 @@ function parseSavedPosition(raw: string | undefined): TxtSavedPosition {
   }
 }
 
-export function TxtReader({
-  book,
-  fontSize,
-  readingWidth,
-  onProgress,
-  onBack,
-}: TxtReaderProps) {
+export const TxtReader = forwardRef<ReaderNavigationHandle, TxtReaderProps>(
+  function TxtReader(
+    {
+      book,
+      fontSize,
+      readingWidth,
+      onProgress,
+      onBack,
+    },
+    ref,
+  ) {
   const { t } = useTranslation()
   const scrollRef = useRef<HTMLDivElement>(null)
   const segmentRefs = useRef<Map<number, HTMLSpanElement>>(new Map())
@@ -314,6 +321,37 @@ export function TxtReader({
     [bootstrap],
   )
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      getBookmarkSnapshot: (): BookmarkPosition | null => {
+        const el = scrollRef.current
+        if (!el || segments.length === 0) return null
+        return {
+          format: 'txt',
+          encoding,
+          firstByte: segments[0]!.byteOffset,
+          scrollTop: el.scrollTop,
+        }
+      },
+      goToBookmark: async (position: BookmarkPosition) => {
+        const enc = position.encoding ?? encoding
+        setEncoding(enc)
+        setLoading(true)
+        try {
+          await bootstrap(enc, position.firstByte ?? 0, position.scrollTop ?? 0)
+        } catch (err) {
+          setError(
+            err instanceof Error ? err.message : i18n.t('reader.txtReadFailed'),
+          )
+        } finally {
+          setLoading(false)
+        }
+      },
+    }),
+    [bootstrap, encoding, segments],
+  )
+
   useEffect(() => {
     const init = async () => {
       if (!window.electronAPI) return
@@ -542,4 +580,5 @@ export function TxtReader({
       </div>
     </div>
   )
-}
+},
+)

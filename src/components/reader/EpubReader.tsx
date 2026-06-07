@@ -1,9 +1,20 @@
-import { useEffect, useRef, useState } from 'react'
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageLoading } from '@/components/ui/page-state'
 import i18n from '@/lib/i18n'
 import { useReadingProgress } from '@/hooks/useReadingProgress'
 import type { Book } from '@/types/electron'
+import type {
+  BookmarkPosition,
+  ReaderNavigationHandle,
+  TocItem,
+} from '@/types/reader-navigation'
 
 interface FoliateViewElement extends HTMLElement {
   open: (url: string) => Promise<void>
@@ -15,12 +26,6 @@ interface FoliateViewElement extends HTMLElement {
   addEventListener: HTMLElement['addEventListener']
 }
 
-interface TocItem {
-  label: string
-  href: string
-  subitems?: TocItem[]
-}
-
 interface EpubReaderProps {
   book: Book
   fileUrl: string
@@ -28,216 +33,236 @@ interface EpubReaderProps {
   readingWidth: number
   onProgress: (percent: number) => void
   onLocationLabel: (label: string) => void
+  onTocReady?: (toc: TocItem[]) => void
   onOpenError?: (message: string) => void
 }
 
-export function EpubReader({
-  book,
-  fileUrl,
-  fontSize,
-  readingWidth,
-  onProgress,
-  onLocationLabel,
-  onOpenError,
-}: EpubReaderProps) {
-  const { t } = useTranslation()
-  const hostRef = useRef<HTMLDivElement>(null)
-  const viewRef = useRef<FoliateViewElement | null>(null)
-  const [toc, setToc] = useState<TocItem[]>([])
-  const [viewReady, setViewReady] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const { loadProgress, saveProgress } = useReadingProgress(book.id)
+export const EpubReader = forwardRef<ReaderNavigationHandle, EpubReaderProps>(
+  function EpubReader(
+    {
+      book,
+      fileUrl,
+      fontSize,
+      readingWidth,
+      onProgress,
+      onLocationLabel,
+      onTocReady,
+      onOpenError,
+    },
+    ref,
+  ) {
+    const { t } = useTranslation()
+    const hostRef = useRef<HTMLDivElement>(null)
+    const viewRef = useRef<FoliateViewElement | null>(null)
+    const lastLocationRef = useRef<{
+      cfi?: string
+      fraction?: number
+      label?: string
+    }>({})
+    const [viewReady, setViewReady] = useState(false)
+    const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    let view: FoliateViewElement | null = null
-    let cancelled = false
+    const onProgressRef = useRef(onProgress)
+    const onLocationLabelRef = useRef(onLocationLabel)
+    const onTocReadyRef = useRef(onTocReady)
+    const onOpenErrorRef = useRef(onOpenError)
 
-    const setup = async () => {
-      try {
-        setLoading(true)
-        await import('foliate-js/view.js')
-        if (cancelled || !hostRef.current) return
+    onProgressRef.current = onProgress
+    onLocationLabelRef.current = onLocationLabel
+    onTocReadyRef.current = onTocReady
+    onOpenErrorRef.current = onOpenError
 
-        view = document.createElement('foliate-view') as FoliateViewElement
-        view.style.flex = '1'
-        view.style.minHeight = '0'
-        viewRef.current = view
-        hostRef.current.appendChild(view)
+    const { loadProgress, saveProgress } = useReadingProgress(book.id)
+    const saveProgressRef = useRef(saveProgress)
+    saveProgressRef.current = saveProgress
 
-        await view.open(fileUrl)
-        const saved = await loadProgress()
-        let lastLocation: unknown
-        if (saved?.position) {
-          try {
-            const pos = JSON.parse(saved.position) as {
-              cfi?: string
+    useImperativeHandle(
+      ref,
+      () => ({
+        getBookmarkSnapshot: (): BookmarkPosition | null => {
+          if (!viewReady) return null
+          const loc = lastLocationRef.current
+          return {
+            format: 'epub',
+            cfi: loc.cfi,
+            fraction: loc.fraction,
+            label: loc.label,
+          }
+        },
+        goToBookmark: async (position: BookmarkPosition) => {
+          const view = viewRef.current
+          if (!view) return
+          if (position.cfi) await view.goTo(position.cfi)
+          else if (typeof position.fraction === 'number') {
+            await view.goTo({ fraction: position.fraction })
+          } else if (position.href) await view.goTo(position.href)
+        },
+      }),
+      [viewReady],
+    )
+
+    useEffect(() => {
+      let view: FoliateViewElement | null = null
+      let cancelled = false
+
+      const setup = async () => {
+        try {
+          setLoading(true)
+          setViewReady(false)
+          await import('foliate-js/view.js')
+          if (cancelled) return
+          if (!hostRef.current) {
+            throw new Error('EPUB reader container not mounted')
+          }
+
+          hostRef.current.replaceChildren()
+
+          view = document.createElement('foliate-view') as FoliateViewElement
+          view.style.flex = '1'
+          view.style.minHeight = '0'
+          view.style.width = '100%'
+          view.style.height = '100%'
+          viewRef.current = view
+          hostRef.current.appendChild(view)
+
+          await view.open(fileUrl)
+          if (cancelled) return
+
+          const saved = await loadProgress()
+          if (cancelled) return
+
+          let lastLocation: unknown
+          if (saved?.position) {
+            try {
+              const pos = JSON.parse(saved.position) as {
+                cfi?: string
+                fraction?: number
+              }
+              if (pos.cfi) lastLocation = pos.cfi
+              else if (typeof pos.fraction === 'number') {
+                lastLocation = { fraction: pos.fraction }
+              }
+            } catch {
+              /* ignore */
+            }
+          }
+          await view.init({ lastLocation, showTextStart: !lastLocation })
+          if (cancelled) return
+
+          const toc = view.book?.toc ?? []
+          onTocReadyRef.current?.(toc)
+          onLocationLabelRef.current(
+            view.book?.metadata?.title ?? book.title,
+          )
+
+          if (typeof saved?.progress_percent === 'number') {
+            onProgressRef.current(saved.progress_percent)
+          }
+
+          view.addEventListener('relocate', ((e: CustomEvent) => {
+            const detail = e.detail as {
               fraction?: number
+              cfi?: string
+              tocItem?: { label?: string }
             }
-            if (pos.cfi) lastLocation = pos.cfi
-            else if (typeof pos.fraction === 'number') {
-              lastLocation = { fraction: pos.fraction }
+            const fraction = detail.fraction ?? 0
+            lastLocationRef.current = {
+              cfi: detail.cfi,
+              fraction,
+              label: detail.tocItem?.label,
             }
-          } catch {
-            /* ignore */
-          }
-        }
-        await view.init({ lastLocation, showTextStart: !lastLocation })
+            onProgressRef.current(fraction * 100)
+            if (detail.tocItem?.label) {
+              onLocationLabelRef.current(detail.tocItem.label)
+            }
+            saveProgressRef.current({
+              position: { cfi: detail.cfi, fraction },
+              progressPercent: fraction * 100,
+            })
+          }) as EventListener)
 
-        setToc(view.book?.toc ?? [])
-        onLocationLabel(view.book?.metadata?.title ?? book.title)
-
-        if (typeof saved?.progress_percent === 'number') {
-          onProgress(saved.progress_percent)
-        }
-
-        view.addEventListener('relocate', ((e: CustomEvent) => {
-          const detail = e.detail as {
-            fraction?: number
-            cfi?: string
-            tocItem?: { label?: string }
-          }
-          const fraction = detail.fraction ?? 0
-          onProgress(fraction * 100)
-          if (detail.tocItem?.label) onLocationLabel(detail.tocItem.label)
-          saveProgress({
-            position: { cfi: detail.cfi, fraction },
-            progressPercent: fraction * 100,
-          })
-        }) as EventListener)
-
-        if (!cancelled) {
           setViewReady(true)
           setLoading(false)
+        } catch (err) {
+          if (cancelled) return
+          setLoading(false)
+          const msg =
+            err instanceof Error
+              ? err.message
+              : i18n.t('reader.epubParseFailed')
+          onOpenErrorRef.current?.(msg)
         }
-      } catch (err) {
-        if (cancelled) return
-        const msg =
-          err instanceof Error
-            ? err.message
-            : i18n.t('reader.epubParseFailed')
-        onOpenError?.(msg)
-      }
-    }
-
-    void setup()
-
-    return () => {
-      cancelled = true
-      setViewReady(false)
-      view?.remove()
-      viewRef.current = null
-    }
-  }, [
-    book.id,
-    book.title,
-    fileUrl,
-    loadProgress,
-    onLocationLabel,
-    onOpenError,
-    onProgress,
-    saveProgress,
-  ])
-
-  useEffect(() => {
-    if (!viewReady) return
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      ) {
-        return
       }
 
-      const v = viewRef.current
-      if (!v) return
+      void setup()
 
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
-        e.preventDefault()
-        void v.prev()
-        return
+      return () => {
+        cancelled = true
+        setViewReady(false)
+        view?.remove()
+        viewRef.current = null
+        hostRef.current?.replaceChildren()
       }
-      if (
-        e.key === 'ArrowRight' ||
-        e.key === 'ArrowDown' ||
-        e.key === 'PageDown' ||
-        e.key === ' '
-      ) {
-        e.preventDefault()
-        void v.next()
+    }, [book.id, book.title, fileUrl, loadProgress])
+
+    useEffect(() => {
+      if (!viewReady) return
+
+      const onKeyDown = (e: KeyboardEvent) => {
+        const target = e.target as HTMLElement
+        if (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable
+        ) {
+          return
+        }
+
+        const v = viewRef.current
+        if (!v) return
+
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+          e.preventDefault()
+          void v.prev()
+          return
+        }
+        if (
+          e.key === 'ArrowRight' ||
+          e.key === 'ArrowDown' ||
+          e.key === 'PageDown' ||
+          e.key === ' '
+        ) {
+          e.preventDefault()
+          void v.next()
+        }
       }
-    }
 
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [viewReady])
+      window.addEventListener('keydown', onKeyDown)
+      return () => window.removeEventListener('keydown', onKeyDown)
+    }, [viewReady])
 
-  useEffect(() => {
-    const root = hostRef.current
-    if (!root) return
-    root.style.setProperty('--reader-font-size', `${fontSize}px`)
-    root.style.setProperty('--reader-max-width', `${readingWidth}px`)
-  }, [fontSize, readingWidth])
+    useEffect(() => {
+      const root = hostRef.current
+      if (!root) return
+      root.style.setProperty('--reader-font-size', `${fontSize}px`)
+      root.style.setProperty('--reader-max-width', `${readingWidth}px`)
+    }, [fontSize, readingWidth, loading])
 
-  const goToHref = async (href: string) => {
-    await viewRef.current?.goTo(href)
-  }
-
-  if (loading) {
-    return <PageLoading message={t('reader.epubLoading')} />
-  }
-
-  return (
-    <div className="flex min-h-0 flex-1 bg-background">
-      {toc.length > 0 && (
-        <aside className="flex w-56 shrink-0 flex-col gap-1 overflow-y-auto border-r p-2 text-sm">
-          <p className="px-2 py-1 font-medium text-muted-foreground">
-            {t('reader.toc')}
-          </p>
-          <TocTree items={toc} onSelect={goToHref} />
-        </aside>
-      )}
-      <div
-        ref={hostRef}
-        className="reader-host flex min-h-0 min-w-0 flex-1 [&_foliate-view]:size-full"
-        style={{ fontSize: `${fontSize}px` }}
-        tabIndex={0}
-        title={t('reader.epubKeysHint')}
-      />
-    </div>
-  )
-}
-
-function TocTree({
-  items,
-  onSelect,
-  depth = 0,
-}: {
-  items: TocItem[]
-  onSelect: (href: string) => void
-  depth?: number
-}) {
-  const { t } = useTranslation()
-
-  return (
-    <ul className="flex flex-col gap-0.5">
-      {items.map((item, i) => (
-        <li key={`${depth}-${i}-${item.href}`}>
-          <button
-            type="button"
-            className="w-full truncate rounded px-2 py-1 text-left hover:bg-accent"
-            style={{ paddingLeft: `${8 + depth * 12}px` }}
-            onClick={() => void onSelect(item.href)}
-          >
-            {item.label || t('common.chapter')}
-          </button>
-          {item.subitems && item.subitems.length > 0 && (
-            <TocTree items={item.subitems} onSelect={onSelect} depth={depth + 1} />
-          )}
-        </li>
-      ))}
-    </ul>
-  )
-}
+    return (
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-background">
+        {loading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background">
+            <PageLoading message={t('reader.epubLoading')} />
+          </div>
+        )}
+        <div
+          ref={hostRef}
+          className="reader-host flex min-h-0 min-w-0 flex-1 [&_foliate-view]:size-full"
+          style={{ fontSize: `${fontSize}px` }}
+          tabIndex={loading ? -1 : 0}
+          title={t('reader.epubKeysHint')}
+        />
+      </div>
+    )
+  },
+)

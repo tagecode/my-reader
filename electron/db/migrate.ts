@@ -31,8 +31,25 @@ function migrateToV2(db: Database.Database): void {
   ).run()
 }
 
+function migrateToV3(db: Database.Database): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bookmarks (
+      id TEXT PRIMARY KEY NOT NULL,
+      book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+      label TEXT NOT NULL,
+      position TEXT NOT NULL DEFAULT '{}',
+      progress_percent REAL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`)
+  db.exec(
+    `CREATE INDEX IF NOT EXISTS idx_bookmarks_book_created ON bookmarks(book_id, created_at DESC)`,
+  )
+}
+
 const STEPS: Record<number, (db: Database.Database) => void> = {
   2: migrateToV2,
+  3: migrateToV3,
 }
 
 export function applyPendingMigrations(

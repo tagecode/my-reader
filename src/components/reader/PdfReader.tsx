@@ -1,6 +1,13 @@
 import * as pdfjs from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
@@ -10,6 +17,7 @@ import { useReadingProgress } from '@/hooks/useReadingProgress'
 import { getPdfjsDocumentOptions } from '@/lib/pdfjsConfig'
 import { ensurePdfjsChineseFonts } from '@/lib/pdfjsFonts'
 import type { Book } from '@/types/electron'
+import type { BookmarkPosition, ReaderNavigationHandle } from '@/types/reader-navigation'
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker
 
@@ -20,12 +28,16 @@ interface PdfReaderProps {
   onBack?: () => void
 }
 
-export function PdfReader({
-  book,
-  onProgress,
-  onLocationLabel,
-  onBack,
-}: PdfReaderProps) {
+export const PdfReader = forwardRef<ReaderNavigationHandle, PdfReaderProps>(
+  function PdfReader(
+    {
+      book,
+      onProgress,
+      onLocationLabel,
+      onBack,
+    },
+    ref,
+  ) {
   const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const pdfRef = useRef<pdfjs.PDFDocumentProxy | null>(null)
@@ -463,6 +475,49 @@ export function PdfReader({
     void goToPage(Number(pageInput) || 1)
   }
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      getBookmarkSnapshot: (): BookmarkPosition | null => {
+        const container = containerRef.current
+        if (!container || numPages === 0) return null
+        const currentPage = getCurrentPage()
+        return {
+          format: 'pdf',
+          page: currentPage,
+          scrollTop: container.scrollTop,
+          scale: scaleRef.current,
+          label: t('reader.pdfPageLabel', {
+            current: currentPage,
+            total: numPages,
+          }),
+        }
+      },
+      goToBookmark: async (position: BookmarkPosition) => {
+        if (
+          typeof position.scale === 'number' &&
+          position.scale >= 0.6 &&
+          position.scale <= 2.5
+        ) {
+          scaleRef.current = position.scale
+          prevScaleRef.current = position.scale
+          setScale(position.scale)
+        }
+        if (typeof position.page === 'number') {
+          await goToPage(position.page, false)
+        }
+        if (
+          typeof position.scrollTop === 'number' &&
+          containerRef.current
+        ) {
+          containerRef.current.scrollTop = position.scrollTop
+          updateProgressFromScroll()
+        }
+      },
+    }),
+    [getCurrentPage, goToPage, numPages, t, updateProgressFromScroll],
+  )
+
   useEffect(() => {
     if (!isReadyRef.current || docLoading || numPages === 0) return
 
@@ -569,4 +624,5 @@ export function PdfReader({
       </div>
     </div>
   )
-}
+},
+)

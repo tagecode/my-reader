@@ -1,13 +1,19 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EpubReader } from '@/components/reader/EpubReader'
 import { PdfReader } from '@/components/reader/PdfReader'
+import {
+  ReaderSidebar,
+  type ReaderSidebarTab,
+} from '@/components/reader/ReaderSidebar'
 import { ReaderSettingsPanel } from '@/components/reader/ReaderSettingsPanel'
 import { ReaderToolbar } from '@/components/reader/ReaderToolbar'
 import { TxtReader } from '@/components/reader/TxtReader'
 import { PageError, PageLoading } from '@/components/ui/page-state'
+import { parseBookmarkPosition, useBookmarks } from '@/hooks/useBookmarks'
 import { useAppStore } from '@/stores/app-store'
-import type { Book } from '@/types/electron'
+import type { Book, Bookmark } from '@/types/electron'
+import type { ReaderNavigationHandle, TocItem } from '@/types/reader-navigation'
 
 type LoadState = 'loading' | 'ready' | 'error'
 
@@ -27,6 +33,8 @@ function ReaderContent({ bookId }: { bookId: string }) {
   const fontSize = Number(settings.fontSize ?? 18)
   const readingWidth = Number(settings.readingWidth ?? 720)
 
+  const navRef = useRef<ReaderNavigationHandle>(null)
+
   const [book, setBook] = useState<Book | null>(null)
   const [fileUrl, setFileUrl] = useState<string | null>(null)
   const [loadState, setLoadState] = useState<LoadState>('loading')
@@ -34,11 +42,61 @@ function ReaderContent({ bookId }: { bookId: string }) {
   const [progressPercent, setProgressPercent] = useState(0)
   const [locationLabel, setLocationLabel] = useState('')
   const [showSettings, setShowSettings] = useState(false)
+  const [showSidebar, setShowSidebar] = useState(false)
+  const [sidebarTab, setSidebarTab] = useState<ReaderSidebarTab>('bookmarks')
+  const [toc, setToc] = useState<TocItem[]>([])
+
+  const {
+    bookmarks,
+    loading: bookmarksLoading,
+    addBookmark,
+    removeBookmark,
+  } = useBookmarks(bookId)
+
+  const showToc = book?.format === 'epub' && toc.length > 0
 
   const handleBack = useCallback(() => {
     setCurrentBookId(null)
     setPage('library')
   }, [setCurrentBookId, setPage])
+
+  const handleToggleSidebar = useCallback(() => {
+    setShowSidebar((open) => {
+      if (!open && book?.format === 'epub' && toc.length > 0) {
+        setSidebarTab('toc')
+      }
+      return !open
+    })
+  }, [book?.format, toc.length])
+
+  const handleAddBookmark = useCallback(async () => {
+    const snapshot = navRef.current?.getBookmarkSnapshot()
+    if (!snapshot) return
+
+    const label =
+      snapshot.label?.trim() ||
+      locationLabel.trim() ||
+      t('reader.bookmarkDefault', { percent: Math.round(progressPercent) })
+
+    await addBookmark(label, snapshot, progressPercent)
+    setShowSidebar(true)
+    setSidebarTab('bookmarks')
+  }, [addBookmark, locationLabel, progressPercent, t])
+
+  const handleTocSelect = useCallback(async (href: string) => {
+    await navRef.current?.goToBookmark({ format: 'epub', href })
+  }, [])
+
+  const handleBookmarkSelect = useCallback(async (bookmark: Bookmark) => {
+    const position = parseBookmarkPosition(bookmark.position)
+    if (!position) return
+    await navRef.current?.goToBookmark(position)
+  }, [])
+
+  const handleOpenError = useCallback((msg: string) => {
+    setLoadState('error')
+    setLoadError(msg)
+  }, [])
 
   useEffect(() => {
     if (!window.electronAPI) return
@@ -59,6 +117,9 @@ function ReaderContent({ bookId }: { bookId: string }) {
 
         setBook(b)
         setProgressPercent(b.progress_percent ?? 0)
+        setToc([])
+        setShowSidebar(false)
+        setSidebarTab(b.format === 'epub' ? 'toc' : 'bookmarks')
         void window.electronAPI.touchLastRead(bookId)
 
         if (b.format === 'epub') {
@@ -117,27 +178,42 @@ function ReaderContent({ bookId }: { bookId: string }) {
         subtitle={locationLabel || book.author || undefined}
         progressPercent={progressPercent}
         onBack={handleBack}
+        onToggleSidebar={handleToggleSidebar}
+        sidebarOpen={showSidebar}
+        onAddBookmark={() => void handleAddBookmark()}
         onToggleSettings={() => setShowSettings((v) => !v)}
-        showToc={book.format === 'epub'}
       />
       <div className="flex min-h-0 flex-1">
+        {showSidebar && (
+          <ReaderSidebar
+            toc={toc}
+            showToc={showToc}
+            activeTab={sidebarTab}
+            onTabChange={setSidebarTab}
+            bookmarks={bookmarks}
+            bookmarksLoading={bookmarksLoading}
+            onTocSelect={(href) => void handleTocSelect(href)}
+            onBookmarkSelect={(b) => void handleBookmarkSelect(b)}
+            onBookmarkRemove={(id) => void removeBookmark(id)}
+          />
+        )}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {book.format === 'epub' && fileUrl && (
             <EpubReader
+              ref={navRef}
               book={book}
               fileUrl={fileUrl}
               fontSize={fontSize}
               readingWidth={readingWidth}
               onProgress={setProgressPercent}
               onLocationLabel={setLocationLabel}
-              onOpenError={(msg) => {
-                setLoadState('error')
-                setLoadError(msg)
-              }}
+              onTocReady={setToc}
+              onOpenError={handleOpenError}
             />
           )}
           {book.format === 'txt' && (
             <TxtReader
+              ref={navRef}
               book={book}
               fontSize={fontSize}
               readingWidth={readingWidth}
@@ -147,6 +223,7 @@ function ReaderContent({ bookId }: { bookId: string }) {
           )}
           {book.format === 'pdf' && (
             <PdfReader
+              ref={navRef}
               book={book}
               onProgress={setProgressPercent}
               onLocationLabel={setLocationLabel}

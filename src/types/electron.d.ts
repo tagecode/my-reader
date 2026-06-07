@@ -38,6 +38,16 @@ export interface ReadingProgress {
   updated_at: number
 }
 
+export interface Bookmark {
+  id: string
+  book_id: string
+  label: string
+  position: string
+  progress_percent: number | null
+  created_at: number
+  updated_at: number
+}
+
 export interface ImportBooksResult {
   imported: string[]
   errors: { path: string; error: string }[]
