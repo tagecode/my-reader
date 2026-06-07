@@ -530,7 +530,7 @@ export const TxtReader = forwardRef<ReaderNavigationHandle, TxtReaderProps>(
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col bg-background text-foreground">
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-2">
         <span className="text-xs text-muted-foreground">{t('common.encoding')}</span>
         {TXT_ENCODINGS.map((enc) => (
@@ -553,13 +553,13 @@ export const TxtReader = forwardRef<ReaderNavigationHandle, TxtReaderProps>(
       </div>
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto px-6 py-8 outline-none"
+        className="min-h-0 flex-1 overflow-y-auto bg-background px-6 py-8 text-foreground outline-none"
         tabIndex={0}
         title={t('reader.txtKeysHint')}
         onScroll={handleScroll}
       >
         <pre
-          className="mx-auto whitespace-pre-wrap font-serif leading-relaxed wrap-break-word"
+          className="mx-auto whitespace-pre-wrap font-serif leading-relaxed text-foreground wrap-break-word"
           style={{
             fontSize: `${fontSize}px`,
             maxWidth: `${readingWidth}px`,

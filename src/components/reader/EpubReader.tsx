@@ -8,7 +8,9 @@ import {
 import { useTranslation } from 'react-i18next'
 import { PageLoading } from '@/components/ui/page-state'
 import i18n from '@/lib/i18n'
+import { buildEpubReaderStyles, type ReaderTheme } from '@/lib/epub-reader-styles'
 import { useReadingProgress } from '@/hooks/useReadingProgress'
+import { useAppStore } from '@/stores/app-store'
 import type { Book } from '@/types/electron'
 import type {
   BookmarkPosition,
@@ -22,6 +24,10 @@ const EPUB_LARGE_FILE_BYTES = 4 * 1024 * 1024
 /** 加载超过此时间后显示「请耐心等待」提示 */
 const EPUB_SLOW_HINT_MS = 4000
 
+interface FoliateRenderer {
+  setStyles?: (styles: string) => void
+}
+
 interface FoliateViewElement extends HTMLElement {
   open: (url: string) => Promise<void>
   init: (opts: { lastLocation?: unknown; showTextStart?: boolean }) => Promise<void>
@@ -29,7 +35,15 @@ interface FoliateViewElement extends HTMLElement {
   next: (distance?: number) => Promise<void>
   prev: (distance?: number) => Promise<void>
   book?: { toc?: TocItem[]; metadata?: { title?: string } }
+  renderer?: FoliateRenderer
   addEventListener: HTMLElement['addEventListener']
+}
+
+function applyEpubTheme(view: FoliateViewElement | null, theme?: ReaderTheme) {
+  const resolved =
+    theme ??
+    ((useAppStore.getState().settings.theme ?? 'light') as ReaderTheme)
+  view?.renderer?.setStyles?.(buildEpubReaderStyles(resolved))
 }
 
 interface EpubReaderProps {
@@ -58,6 +72,7 @@ export const EpubReader = forwardRef<ReaderNavigationHandle, EpubReaderProps>(
     ref,
   ) {
     const { t } = useTranslation()
+    const theme = (useAppStore((s) => s.settings.theme) ?? 'light') as ReaderTheme
     const hostRef = useRef<HTMLDivElement>(null)
     const viewRef = useRef<FoliateViewElement | null>(null)
     const lastLocationRef = useRef<{
@@ -177,6 +192,8 @@ export const EpubReader = forwardRef<ReaderNavigationHandle, EpubReaderProps>(
           await view.init({ lastLocation, showTextStart: !lastLocation })
           if (cancelled) return
 
+          applyEpubTheme(view)
+
           const toc = view.book?.toc ?? []
           onTocReadyRef.current?.(toc)
           onLocationLabelRef.current(
@@ -268,6 +285,11 @@ export const EpubReader = forwardRef<ReaderNavigationHandle, EpubReaderProps>(
       window.addEventListener('keydown', onKeyDown)
       return () => window.removeEventListener('keydown', onKeyDown)
     }, [viewReady])
+
+    useEffect(() => {
+      if (!viewReady) return
+      applyEpubTheme(viewRef.current, theme)
+    }, [theme, viewReady])
 
     useEffect(() => {
       const root = hostRef.current
